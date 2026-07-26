@@ -7,7 +7,12 @@
     "android": "expo start -c --android",
     "ios": "expo start -c --ios",
     "web": "expo start -c --web",
-    "clean": "rm -rf .expo node_modules"
+    "clean": "rm -rf .expo node_modules",
+    "sidecar:dev": "cd services/hermes-sidecar && npx tsx src/main.ts",
+    "sidecar:test": "cd services/hermes-sidecar && npx vitest run",
+    "sidecar:typecheck": "cd services/hermes-sidecar && npx tsc --noEmit",
+    "sidecar:openapi": "cd services/hermes-sidecar && npx tsx scripts/generate-openapi.ts",
+    "sidecar:install": "cd services/hermes-sidecar && npm install"
   },
   "dependencies": {
     "@rn-primitives/portal": "~1.4.0",
