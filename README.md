@@ -1,73 +1,55 @@
-# Minimal Template
+# Hermes Mobile
 
-This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
+Hermes Mobile is the Android control plane for the Hermes Agent installation running on the `openclaw` VM. The application is being built as a governed operator surface: native operational screens, scoped device identity, a hardened sidecar, explicit permissions, resilient event streaming, redacted notifications, and evidence-bound approvals.
 
-It was initialized using the following command, then the `Minimal (Nativewind)` template was selected when prompted:
+## Product documentation
+
+- [Hermes Mobile Wayfinder Map](docs/HERMES_MOBILE_WAYFINDER.md) — destination, decisions already made, current reality, evidence frontier, risks, and out-of-scope boundaries.
+- [Hermes Mobile MVP Specification](docs/HERMES_MOBILE_MVP_SPEC.md) — full product specification, user stories, architecture, contracts, security model, testing strategy, acceptance criteria, and release gates.
+
+## Current repository baseline
+
+This repository was initialized as a [React Native](https://reactnative.dev/) project using [Expo](https://expo.dev/), [Expo Router](https://expo.dev/router), [NativeWind](https://www.nativewind.dev/), and [React Native Reusables](https://reactnativereusables.com).
+
+It was initialized using:
 
 ```bash
 npx @react-native-reusables/cli@latest init
 ```
+
+The product documentation distinguishes the GitHub-visible template baseline from the consolidated sidecar and contracts branch reported on the `openclaw` VM but not yet pushed at the time the documents were written.
 
 ## Getting Started
 
 To run the development server:
 
 ```bash
-    npm run dev
-    # or
-    yarn dev
-    # or
-    pnpm dev
-    # or
-    bun dev
+npm run dev
 ```
 
-This will start the Expo Dev Server. Open the app in:
-
-- **iOS**: press `i` to launch in the iOS simulator _(Mac only)_
-- **Android**: press `a` to launch in the Android emulator
-- **Web**: press `w` to run in a browser
-
-You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
+This starts the Expo development server. The current project scripts also support Android, iOS, and web development targets.
 
 ## Adding components
 
-You can add more reusable components using the CLI:
+Add reusable components with:
 
 ```bash
 npx react-native-reusables/cli@latest add [...components]
 ```
 
-> e.g. `npx react-native-reusables/cli@latest add input textarea`
-
-If you don't specify any component names, you'll be prompted to select which components to add interactively. Use the `--all` flag to install all available components at once.
-
 ## Project Features
 
-- ⚛️ Built with [Expo Router](https://expo.dev/router)
-- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Nativewind](https://www.nativewind.dev/)
-- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
-- 🚀 New Architecture enabled
-- 🔥 Edge to Edge enabled
-- 📱 Runs on iOS, Android, and Web
+- Built with Expo Router
+- Styled with Tailwind CSS through NativeWind
+- UI components from React Native Reusables
+- React Native New Architecture enabled
+- Typed Expo Router routes enabled
+- Android private pilot is the first product target
 
-## Learn More
+## References
 
-To dive deeper into the technologies used:
-
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Nativewind Docs](https://www.nativewind.dev/)
+- [React Native documentation](https://reactnative.dev/docs/getting-started)
+- [Expo documentation](https://docs.expo.dev/)
+- [NativeWind documentation](https://www.nativewind.dev/)
 - [React Native Reusables](https://reactnativereusables.com)
-
-## Deploy with EAS
-
-The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
-
 - [EAS Build](https://docs.expo.dev/build/introduction/)
-- [EAS Updates](https://docs.expo.dev/eas-update/introduction/)
-- [EAS Submit](https://docs.expo.dev/submit/introduction/)
-
----
-
-If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
