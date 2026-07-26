@@ -1,106 +1,178 @@
 # Hermes Mobile MVP Specification
 
-**Status:** Ready for ticketing; implementation remains gated by operational evidence  
-**Version:** 1.0  
+**Status:** Ready for staged ticketing; production capabilities remain gated by evidence  
+**Version:** 1.1  
 **Date:** 2026-07-26  
 **Product:** Hermes Mobile  
 **Primary platform:** Android private pilot  
-**Companion document:** [Hermes Mobile Wayfinder Map](./HERMES_MOBILE_WAYFINDER.md)
+**Canonical Wayfinder issue:** [Wayfinder Map — Hermes Mobile Governed Operator MVP](https://github.com/egawilldoit/hermes-mobile/issues/2)  
+**Companion decision record:** [Hermes Mobile Wayfinder Map](./HERMES_MOBILE_WAYFINDER.md)
 
-This specification follows the structure and intent of Matt Pocock's [to-spec skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/to-spec/SKILL.md): it synthesizes the decisions already made, describes behavior from the user's perspective, avoids inventing a second product architecture, and defines the highest practical test seams before implementation is expanded.
+This specification follows the [to-spec skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/to-spec/SKILL.md). It synthesizes decisions already made, distinguishes verified facts from reported local implementation, defines the highest useful behavioral test seams, and avoids inventing a second Hermes runtime.
 
 ---
 
 ## Problem Statement
 
-The operator runs Hermes Agent continuously on the `openclaw` VM. Hermes can already execute agent work, maintain sessions, stream tool progress, manage scheduled jobs, and request human approvals. Today, however, safely supervising that work from an Android phone requires switching between web interfaces, SSH, chat platforms, and infrastructure dashboards.
+The operator runs Hermes Agent continuously on the `openclaw` VM. Hermes already owns agent sessions, messages, tools, runs, scheduled jobs, memory, skills, model/provider selection, and approval behavior.
 
-The existing remote surfaces do not provide one trusted mobile control plane with:
+Supervising this work safely from Android currently requires switching between web interfaces, Slack or other messaging platforms, SSH, and infrastructure dashboards. None of those surfaces alone provides a trusted mobile control plane with:
 
-- a prioritized operational overview;
-- durable mobile identity and device revocation;
-- scoped authorization instead of the Hermes master API credential;
-- reliable mobile reconnection and state reconciliation;
-- urgent push notifications;
+- an operationally prioritized Command Center;
+- durable operator and device identity;
+- revocable device sessions;
+- scoped authorization instead of the Hermes master bearer key;
+- reliable stream reconnect and current-state reconciliation;
+- redacted urgent push notifications;
 - full-screen evidence-based approvals;
 - risk-based biometric step-up;
-- an audit trail of mobile decisions;
-- protection against stale, duplicated, or ambiguously completed mutations.
+- idempotent mutations and unknown-outcome handling;
+- mobile audit evidence;
+- compatibility protection when Hermes changes.
 
-Directly embedding the Hermes API credential in an Android application is unacceptable because Hermes' API exposes an agent with terminal, file, web, memory, and skill capabilities. Exposing a generic proxy is also unacceptable because it would turn the phone into a remote shell. Reimplementing Hermes sessions, jobs, runs, or databases would create conflicting sources of truth.
+Putting the Hermes API key in an APK is unacceptable. Hermes documents that its API exposes the full agent toolset, including terminal and file operations. A generic proxy would turn the mobile app into a remote shell. Reading Hermes SQLite or copying Hermes sessions/jobs into Supabase would create a second source of truth.
 
-The VM audit also identified operational risks that must remain visible in the product plan: credentials previously existed in unsafe locations, the Cloudflare mobile path is not yet activated, the sidecar is not yet deployed, the Hermes update pipeline is frozen pending compatibility controls, and the reported SQLite runtime must be upgraded and validated before production mobile write actions are enabled.
+The VM audit and remediation also leave production gates that the product plan must not hide:
 
-The user needs a secure Android application that makes Hermes observable and governable without turning the phone, sidecar, or Supabase database into a second Hermes runtime or a new root-administration surface.
+- 19 reported exposed credentials still require rotation and old-value revocation;
+- interactive administrator recovery and fresh-session privilege state must be proven;
+- PM2/WebUI secret persistence must be made durable;
+- Cloudflare Access/Tunnel and origin protection are not yet deployed;
+- the sidecar code is reported locally but not deployed;
+- SQLite `3.50.4` was reported and production write controls remain blocked until a fixed runtime is proven;
+- the automatic Hermes update timer is disabled pending compatibility and rollback controls.
+
+The user needs one Android application that makes Hermes observable and governable without making the phone, sidecar, WebView, or mobile-control database another Hermes runtime or an infrastructure-administration surface.
 
 ---
 
 ## Solution
 
-Build Hermes Mobile as a native Android control plane around the existing Hermes Agent installation.
+Build Hermes Mobile as a **Governed Operator** Android control plane around the existing Hermes installation.
 
-The solution has four cooperating boundaries:
+### System boundaries
 
-1. **Hermes Agent** remains authoritative for sessions, messages, runs, jobs, approvals, models, skills, memory, and execution.
-2. **Hermes Mobile sidecar** protects Hermes credentials, authenticates trusted devices, exposes explicit mobile operations, relays events, generates alerts, and records mobile-owned audit data.
-3. **Hermes Mobile Android application** provides the Command Center, session browsing/chat, job views and controls, alerts, approvals, diagnostics, and secure device-session handling.
-4. **Cloudflare Access and Tunnel** provide approved-email enrollment and an outbound-only path from the public edge to the loopback sidecar.
+1. **Hermes Agent** remains authoritative for sessions, messages, runs, jobs, native approvals, tools, models, skills, memory, and execution.
+2. **Hermes Mobile sidecar** protects Hermes credentials, authenticates trusted devices, exposes explicit operations, relays events, generates alerts, and stores mobile-owned security/audit state.
+3. **Hermes Mobile Android app** provides the native Command Center, operational screens, device session, diagnostics, notification handling, and evidence-based decisions.
+4. **Cloudflare Access and Tunnel** provide approved-email enrollment and an outbound-only edge path to the loopback sidecar.
+5. **Mobile-control Postgres/Supabase schema** stores only device, token, alert, notification, idempotency, compatibility, health, and audit records.
 
-The final MVP is a **Governed Operator** experience:
+### Release One shape
 
-- one operator and one Hermes production installation in Release One;
-- multi-user-safe identifiers and data design from the start;
-- native operational and sensitive screens;
-- initial chat reuse where it reduces risk and duplication;
-- read-only delivery first;
-- governed chat/run controls second;
-- approval and scheduled-job mutations only after all security and evidence gates pass.
+- one operator;
+- one production Hermes VM;
+- Android private APK;
+- multi-user-safe and multi-instance-safe identifiers;
+- native operational/sensitive screens;
+- chat reuse or native chat selected only after Android proof;
+- read-only delivery before mutations;
+- write actions enabled by explicit release-stage flags;
+- approvals and manual job execution enabled only after SQLite, approval-schema, biometric-signature, audit, and update gates pass.
 
-The product fails closed. Unknown Hermes capabilities are unavailable. The application never retries an uncertain mutation blindly. A stale approval cannot execute. Push notifications are advisory; authoritative state is refreshed in the application.
+### Fail-closed behavior
+
+- unknown sidecar routes return `404`;
+- unknown Hermes capabilities are unavailable;
+- incompatible Hermes/app versions disable affected mutations;
+- stale approvals cannot execute;
+- timed-out mutations reconcile before retry;
+- push is advisory and in-app state is authoritative;
+- missing evidence disables the action rather than weakening policy.
+
+---
+
+## Current Implementation Baseline
+
+### GitHub-visible baseline
+
+GitHub `main` currently contains the original Expo template:
+
+- Expo `~56.0.13`;
+- React Native `0.85.3`;
+- React `19.2.3`;
+- Expo Router `~56.2.12`;
+- NativeWind and React Native Reusables;
+- no visible sidecar or production connection on `main`.
+
+### Operator-reported local branch
+
+The operator reported local branch `feature/hermes-sidecar-integration` with commits:
+
+- `1e4e37a` — repository structure;
+- `a6b478d` — hardened sidecar;
+- `806669d` — shared contracts, mock API client, and docs.
+
+Reported results:
+
+- 27 sidecar files;
+- 96/96 tests passing;
+- mock integration enabled by default;
+- mobile write actions disabled;
+- no production deployment;
+- no EGA House coupling.
+
+Reported routes/defaults:
+
+- `POST /register`;
+- `POST /token/refresh`;
+- `DELETE /devices/:id`;
+- `GET /v1/mobile/events?lastEventId=`;
+- 10-minute access token;
+- 30-day refresh family;
+- refresh-token rotation and reuse detection;
+- 60 requests/minute general default;
+- 5 refresh attempts/minute default;
+- 3 concurrent WebSockets/device;
+- replay up to 100 events.
+
+These are not repository-authoritative until issue [Publish and verify the consolidated Hermes Mobile foundation](https://github.com/egawilldoit/hermes-mobile/issues/3) pushes and reproduces them.
+
+Before remote pilot, the public mobile API must be versioned consistently. The existing local auth paths may be renamed or aliased under `/v1/auth/*` in one coordinated client/server/OpenAPI change. No pre-pilot backward-compatibility promise is required.
 
 ---
 
 ## Goals and Success Measures
 
-### Product goals
+### Goals
 
-1. Give the operator a single Android Command Center for the most important Hermes state.
-2. Allow the operator to inspect and govern Hermes without SSH for ordinary operational actions.
-3. Protect the Hermes master credential and all infrastructure secrets from the mobile device.
-4. Preserve Hermes as the only execution and workflow authority.
-5. Deliver urgent notifications without exposing sensitive content on the lock screen.
-6. Make every high-risk mobile action explicit, current, idempotent, and auditable.
-7. Survive normal mobile lifecycle events and network transitions without losing truth.
-8. Establish a structure that can support additional users and Hermes installations later without redesigning all records.
+1. Give the operator one Android Command Center for important Hermes state.
+2. Remove the need for SSH for ordinary governed actions.
+3. Keep Hermes and infrastructure master credentials off the phone and out of WebView JavaScript.
+4. Preserve Hermes as the only execution/workflow authority.
+5. Deliver urgent alerts without exposing sensitive lock-screen content.
+6. Make every enabled mutation scoped, current, idempotent, auditable, and reconcilable.
+7. Survive network switching, Android suspension, process death, and service restart without inventing state.
+8. Preserve a path to additional users and Hermes installations without singleton schema assumptions.
+9. Avoid risky VM changes during code-only phases; every production change is manual/reviewed with backup and rollback.
 
 ### MVP success measures
 
-The MVP is successful when:
+- Signed APK installs and runs on the operator's Samsung Android 14+ device.
+- Command Center obtains current state through Cloudflare Tunnel and the sidecar.
+- APK, app storage, WebView, logs, and diagnostics contain no Hermes, Supabase service-role, Cloudflare service, provider, GitHub, Linear, Slack, or infrastructure master secret.
+- Revoked device cannot refresh or call the sidecar.
+- Foreground reconciliation succeeds after network switching and process suspension.
+- Event reconnect does not duplicate lifecycle state.
+- Urgent alert exists in the database before/beside push delivery.
+- Approval decisions are approve-once or deny, bound to exact current evidence, and audited.
+- Duplicate taps return the original idempotent result.
+- Unknown mutation outcome is visibly reconciled.
+- Sidecar/Hermes/app compatibility and rollback procedures are tested.
+- All security-negative and Samsung lifecycle tests pass.
 
-- the signed Android APK installs and operates on the operator's Samsung device;
-- the Command Center loads current Hermes and sidecar state through Cloudflare Tunnel;
-- no Hermes API key, Supabase service-role key, Cloudflare service credential, provider key, or infrastructure secret is present in the APK or mobile logs;
-- a revoked device cannot refresh or access the sidecar;
-- foreground state refresh completes after app resume and network switching;
-- an interrupted stream reconnects and reconciles without duplicating lifecycle events;
-- urgent alerts appear in the in-app alert inbox and may generate redacted push notifications;
-- approve-once and deny decisions are bound to the exact current operation and recorded in append-only audit history;
-- duplicate taps do not duplicate an operation;
-- an unknown mutation outcome is visibly reconciled before another attempt;
-- sidecar, Hermes, and update rollback procedures are tested;
-- all release-gate security, lifecycle, and compatibility tests pass.
+### Initial performance targets
 
-### Performance targets
+Measured on the real Samsung through Cloudflare:
 
-These are initial MVP targets and should be measured on the real Samsung device and VM path:
+- cached Command Center shell visible within 1 second after unlock;
+- fresh health/alert summary within 3 seconds on a healthy network;
+- mobile relay median overhead below 250 ms beyond upstream event arrival at the sidecar;
+- reconnect state visible within 1 second of detected loss;
+- first reconnect attempt around 250 ms, then bounded exponential backoff with jitter;
+- no unbounded event queue, replay buffer, transcript cache, or health history.
 
-- cached Command Center shell visible within 1 second after app unlock;
-- fresh health/alert summary available within 3 seconds on a healthy network;
-- foreground event relay adds less than 250 milliseconds median overhead beyond the upstream Hermes event arrival at the sidecar;
-- visible reconnect state within 1 second after stream loss;
-- automatic reconnect attempts begin within 250 milliseconds and back off with jitter;
-- high-risk mutation API calls use bounded timeouts and return a correlation identifier;
-- no unbounded in-memory event queue or transcript cache.
+Targets are acceptance measurements, not current claims.
 
 ---
 
@@ -108,477 +180,472 @@ These are initial MVP targets and should be measured on the real Samsung device 
 
 ### Operator
 
-The initially approved human user. The operator can enroll a trusted Android device, observe Hermes, and perform explicitly permitted governed actions.
+The only approved Release One human.
 
 ### Trusted Device
 
-A registered Android installation with a server-known device identity, protected refresh credentials, push registrations, and revocation state.
+A registered Android installation with device identity, revocation state, protected refresh credentials, optional push registrations, and a server-known public key.
 
-### Hermes Mobile Application
+### Android App
 
-The native Android client. It renders state and collects decisions but is never an authority for Hermes run/job/session truth.
+Renders state and captures decisions. It is not authoritative for Hermes truth.
 
-### Hermes Mobile Sidecar
+### Sidecar
 
-The server-side policy and integration boundary. It validates identity, enforces authorization, adapts Hermes interfaces, relays events, and records mobile-owned evidence.
+Server-side identity, policy, compatibility, integration, notification, reconciliation, and audit boundary.
 
 ### Hermes Agent
 
-The authoritative agent runtime on the VM.
+Authoritative runtime on `openclaw`.
 
 ### Cloudflare Access
 
-The enrollment identity gate. It proves that the approved email completed authentication and supplies a signed application JWT to the origin.
+Enrollment identity gate for the approved email.
 
 ### Mobile-Control Database
 
-The durable store for device, token, alert, notification, idempotency, compatibility, and audit records. It does not duplicate Hermes sessions, runs, messages, or jobs.
+Durable mobile-owned security/operational metadata only.
 
 ---
 
 ## User Stories
 
-1. As the operator, I want to open one Android application and immediately understand whether Hermes needs my attention, so that I do not have to inspect multiple tools.
-2. As the operator, I want pending approvals shown before routine activity, so that blocked agent work is resolved quickly.
-3. As the operator, I want failed and blocked runs prioritized above healthy runs, so that operational problems are visible first.
-4. As the operator, I want to see active runs and their current stage, so that I understand what Hermes is doing now.
-5. As the operator, I want Hermes liveness and detailed readiness represented separately, so that an online process is not mistaken for a healthy system.
-6. As the operator, I want critical VM health summarized without remote shell access, so that disk, database, and service risks are visible safely.
-7. As the operator, I want to browse recent Hermes sessions, so that I can resume relevant work from my phone.
-8. As the operator, I want to read a session's message history, so that I can understand context before acting.
-9. As the operator, I want to search and filter sessions, so that a large session history remains usable.
-10. As the operator, I want to fork a session when supported and permitted, so that I can explore an alternative without corrupting the original thread.
-11. As the operator, I want to send a governed chat prompt, so that I can continue normal Hermes interaction remotely.
-12. As the operator, I want chat and tool progress to stream, so that long operations do not appear frozen.
-13. As the operator, I want to start a normal governed run, so that I can initiate approved work without SSH.
-14. As the operator, I want to stop a run after explicit confirmation, so that runaway or incorrect work can be interrupted.
-15. As the operator, I want stop requests to show a `stopping` state until Hermes actually exits, so that I do not assume execution ended immediately.
-16. As the operator, I want scheduled jobs listed with schedule, next run, last run, and outcome, so that I can understand automation health.
-17. As the operator, I want to pause or resume a scheduled job after confirmation, so that I can govern recurring work safely.
-18. As the operator, I want a biometric step-up before manually running a scheduled job, so that accidental or unauthorized execution is reduced.
-19. As the operator, I want urgent failures to create an alert, so that I do not have to keep the application open.
-20. As the operator, I want approval-required events to create a high-priority alert, so that blocked work is surfaced promptly.
-21. As the operator, I want lock-screen notifications to hide commands, prompts, paths, and tool arguments, so that sensitive work is not disclosed.
-22. As the operator, I want tapping a notification to open the current authoritative alert screen, so that stale push content cannot drive a decision.
-23. As the operator, I want routine successes available in the app without interrupting me, so that notifications remain meaningful.
-24. As the operator, I want an alert to show whether it is open, acknowledged, or resolved, so that repeated failures are not confused with new incidents.
-25. As the operator, I want repeated instances of the same unresolved failure deduplicated, so that alert noise does not hide new incidents.
-26. As the operator, I want to enroll using my approved email through Cloudflare Access, so that no separate public password database is required for the pilot.
-27. As the operator, I want enrollment to happen once per trusted device, so that I do not need email verification on every app launch.
-28. As the operator, I want the application to use short-lived access tokens and rotating refresh tokens, so that a captured token has limited value.
-29. As the operator, I want to revoke a lost device from the server, so that it cannot regain access.
-30. As the operator, I want refresh-token reuse to revoke the affected token family, so that stolen credentials fail closed.
-31. As the operator, I want tokens and device secrets stored in Android's secure storage, so that they are not placed in normal application storage.
-32. As the operator, I want an approval screen to show the exact tool, command, arguments, working directory, resources, risk, and expiry, so that I understand what I am approving.
-33. As the operator, I want high-risk approval to require biometrics, so that possession of an unlocked app session is not enough.
-34. As the operator, I want approval to be bound to the exact operation digest and current run state, so that a changed command cannot reuse my decision.
-35. As the operator, I want only approve-once and deny available in the initial MVP, so that mobile approval does not create permanent command policy.
-36. As the operator, I want an expired or changed approval marked stale, so that I cannot approve an obsolete operation.
-37. As the operator, I want duplicate taps to return the original idempotent result, so that one action is not executed twice.
-38. As the operator, I want a timed-out mutation reconciled before retry, so that an unknown successful action is not duplicated.
-39. As the operator, I want every sensitive mobile decision recorded with device, principal, operation digest, and outcome, so that I can audit what happened.
-40. As the operator, I want the app to show when data is stale or cached, so that offline information is not mistaken for live truth.
-41. As the operator, I want the application to refresh authoritative state when it returns to the foreground, so that Android suspension does not leave controls stale.
-42. As the operator, I want network switching and reconnect state represented clearly, so that temporary mobile loss does not look like Hermes failure.
-43. As the operator, I want missed and duplicate events reconciled, so that the Command Center remains correct after disconnection.
-44. As the operator, I want the app to disable mutations when its version or the Hermes version is unsupported, so that compatibility uncertainty fails closed.
-45. As the operator, I want diagnostics to show app version, environment, sidecar state, Hermes instance, last refresh, and a correlation ID, so that failures can be investigated without exposing secrets.
-46. As the operator, I want to copy a sanitized diagnostic summary, so that I can share evidence with an agent or developer safely.
-47. As the operator, I want the private APK signed with a controlled key and installable on my Samsung device, so that I can pilot without a public store release.
-48. As the operator, I want notification channels separated by approvals, failures, critical system events, and routine activity, so that Android notification settings match event importance.
-49. As a future additional operator, I want records scoped by principal and device, so that Release One does not prevent safe multi-user support.
-50. As a future administrator, I want multiple Hermes installations represented explicitly, so that Release One's single instance does not become a permanent singleton assumption.
-51. As a security reviewer, I want unknown sidecar routes and Hermes capabilities denied by default, so that upstream additions do not silently expand mobile authority.
-52. As a security reviewer, I want to prove the mobile APK contains no master or service credentials, so that client compromise does not expose the VM.
-53. As a security reviewer, I want the sidecar to run without sudo, Docker, SSH keys, or Hermes SQLite access, so that compromise has a bounded blast radius.
-54. As an operator maintaining Hermes, I want updates tested in an isolated candidate before promotion, so that a daily update cannot silently break the mobile contract.
-55. As an operator maintaining Hermes, I want active runs and pending approvals to defer maintenance, so that updates do not kill governed work.
-56. As an operator maintaining Hermes, I want rollback tested before promotion, so that an incompatible Hermes release can be reversed quickly.
-57. As an operator, I want production write controls disabled until the SQLite runtime and database integrity gates pass, so that mobile convenience does not amplify a known persistence risk.
-58. As a developer, I want the mobile app and sidecar to share portable contracts without sharing platform-specific implementation, so that types remain consistent without bundling server code into Android.
-59. As a developer, I want mock mode to support the full mobile information architecture, so that UI work can proceed without production access.
-60. As a developer, I want the highest-level sidecar contract and Android vertical slice tested, so that the product is verified through behavior rather than private implementation details.
+1. As the operator, I want one Command Center, so that I immediately understand whether Hermes needs attention.
+2. As the operator, I want pending approvals prioritized, so that blocked work is resolved quickly.
+3. As the operator, I want failed or blocked runs above routine activity, so that operational failures are visible first.
+4. As the operator, I want active runs and their current state, so that long work does not appear invisible.
+5. As the operator, I want liveness separated from detailed readiness, so that an online process is not mistaken for a healthy service.
+6. As the operator, I want allowlisted VM health without shell access, so that disk/database/service risks are visible safely.
+7. As the operator, I want recent sessions, so that I can find current work.
+8. As the operator, I want session message history, so that I understand context before acting.
+9. As the operator, I want session search/filter, so that large history remains usable.
+10. As the operator, I want a governed fork operation, so that an alternative thread does not overwrite the original.
+11. As the operator, I want governed chat, so that I can continue Hermes work remotely.
+12. As the operator, I want streamed assistant/tool progress, so that long turns do not look frozen.
+13. As the operator, I want to start a normal governed run, so that approved work can begin without SSH.
+14. As the operator, I want explicit confirmation before stopping a run, so that accidental cancellation is reduced.
+15. As the operator, I want `stopping` shown until execution exits, so that a stop request is not mistaken for completion.
+16. As the operator, I want jobs listed with schedule, next run, last run, and result, so that automation health is visible.
+17. As the operator, I want confirmation before pause/resume, so that schedule state changes are intentional.
+18. As the operator, I want biometric step-up before manual job run, so that execution requires stronger proof.
+19. As the operator, I want approval-required events to create urgent alerts, so that blocked work is surfaced.
+20. As the operator, I want failures and critical health to alert me, so that I do not keep the app open.
+21. As the operator, I want routine successes in-app without interrupting notifications, so that alerting remains meaningful.
+22. As the operator, I want lock-screen content redacted, so that commands, prompts, paths, repositories, and tool arguments remain private.
+23. As the operator, I want notification taps to fetch current authoritative state, so that stale push content cannot drive decisions.
+24. As the operator, I want alerts marked open, acknowledged, and resolved, so that incident lifecycle is clear.
+25. As the operator, I want repeated identical failures deduplicated and suppressed, so that alert storms do not hide new problems.
+26. As the operator, I want configurable quiet hours, so that non-critical notifications respect my schedule.
+27. As the operator, I want critical security/system policy explicit during quiet hours, so that suppression never silently hides required action.
+28. As the operator, I want one approved-email enrollment through Cloudflare Access, so that no separate public password database is needed.
+29. As the operator, I want enrollment once per trusted device, so that email OTP is not required on every launch.
+30. As the operator, I want short-lived access and rotating refresh tokens, so that captured credentials have bounded value.
+31. As the operator, I want refresh-token reuse to revoke the token family, so that theft fails closed.
+32. As the operator, I want to revoke a lost device, so that it cannot regain access or receive push.
+33. As the operator, I want refresh tokens and device keys in secure native storage, so that normal app storage does not expose them.
+34. As the operator, I want deep links to contain only one-time code/state, so that tokens do not leak through link handling.
+35. As the operator, I want an approval screen with exact tool/command/arguments/resources/risk/expiry, so that I understand the operation.
+36. As the operator, I want only approve-once and deny in Release One, so that mobile cannot create permanent command policy.
+37. As the operator, I want biometric-backed device signing for approval, so that a client boolean is not trusted as proof.
+38. As the operator, I want approval bound to an operation digest and current state, so that changed work cannot reuse my decision.
+39. As the operator, I want expired/changed approvals stale, so that obsolete operations cannot execute.
+40. As the operator, I want duplicate taps idempotent, so that one action cannot execute twice.
+41. As the operator, I want lost-response mutations reconciled, so that an already-applied action is not retried blindly.
+42. As the operator, I want sensitive actions audited with principal/device/digest/outcome, so that mobile governance is traceable.
+43. As the operator, I want stale/cached/offline indicators, so that old data is not mistaken for current truth.
+44. As the operator, I want foreground refresh, so that Android suspension cannot leave enabled controls stale.
+45. As the operator, I want reconnect and network-switch state visible, so that phone connectivity is not confused with Hermes health.
+46. As the operator, I want replay gaps reconciled, so that missed, duplicate, or out-of-order events do not corrupt the UI.
+47. As the operator, I want mutations disabled on unsupported versions, so that compatibility uncertainty fails closed.
+48. As the operator, I want sanitized diagnostics with correlation IDs, so that failures can be investigated safely.
+49. As the operator, I want a signed internal APK, so that the pilot can run without public store distribution.
+50. As the operator, I want separate Android notification channels, so that approval/failure/system/routine preferences can differ.
+51. As the operator, I want token changes and reinstall handled, so that notifications do not silently target an invalid registration.
+52. As the operator, I want provider outage to preserve in-app alerts, so that push failure does not erase incidents.
+53. As the operator, I want the pilot unsupported on rooted/compromised devices for high-risk controls, so that device compromise does not weaken approvals.
+54. As a future operator, I want principal/device scoping, so that Release One does not prevent multi-user support.
+55. As a future administrator, I want explicit Hermes-instance identity, so that one current VM does not become a singleton assumption.
+56. As a security reviewer, I want unknown routes/capabilities denied, so that upstream additions do not expand authority silently.
+57. As a security reviewer, I want proof the APK/WebView/logs contain no master credentials, so that client compromise does not expose the VM.
+58. As a security reviewer, I want the sidecar without sudo, Docker, SSH keys, broad home access, or Hermes SQLite, so that compromise has bounded blast radius.
+59. As a security reviewer, I want correct Cloudflare JWT and real-IP validation, so that identity/rate limits cannot be spoofed.
+60. As an operator maintaining Hermes, I want candidate validation before promotion, so that updates do not silently break the mobile contract.
+61. As an operator maintaining Hermes, I want active work to defer maintenance, so that restarts do not interrupt runs/approvals/delegations.
+62. As an operator maintaining Hermes, I want tested rollback, so that incompatible updates can be reversed.
+63. As the operator, I want production writes blocked until SQLite is fixed and validated, so that convenience does not amplify persistence risk.
+64. As a developer, I want portable shared contracts, so that mobile/server agree without platform dependency leakage.
+65. As a developer, I want mock mode for all initial screens, so that UI development does not require production access.
+66. As a developer, I want the highest-level sidecar and Android seams tested, so that behavior—not private implementation—is verified.
+67. As a developer, I want current local route/default claims verified after push, so that documentation does not fossilize unreviewed implementation.
+68. As an operator, I want no risky VM configuration changes during UI/code stages, so that product development cannot damage the production host.
 
 ---
 
 ## MVP Scope and Delivery Stages
 
-The MVP is one governed product delivered through staged capability gates. A stage may ship to the private pilot only when its own acceptance criteria pass.
-
 ### Stage 0 — Repository and contract foundation
 
 Included:
 
-- canonical Hermes Mobile repository;
-- existing Expo application preserved;
+- canonical repository;
+- preserved Expo app;
 - sidecar module;
-- portable shared contracts;
-- mock Hermes implementation;
-- safe defaults with production integration and write actions disabled;
-- unit, contract, and security-negative tests.
+- portable contracts;
+- typed mock API client;
+- mock Hermes/event fixtures;
+- safe defaults;
+- unit/contract/security-negative tests.
 
-Exit condition: repository state and tests are pushed and reproducible.
+Exit:
+
+- reported local commits pushed;
+- docs branch reconciled;
+- exact route/OpenAPI contract reviewed;
+- 96 sidecar tests and mobile/contract checks reproducible;
+- no production secret.
 
 ### Stage 1 — Android read-only vertical slice
 
 Included:
 
-- mock trusted session shell;
-- native Command Center;
-- Hermes/sidecar health;
-- sessions and message history;
-- jobs and job detail;
-- alerts and diagnostics;
-- loading, empty, error, offline, and stale states;
-- mobile event state and foreground reconciliation;
-- no production connectivity and no write action.
+- mock sign-in/session shell;
+- Command Center;
+- health/readiness;
+- sessions/messages;
+- jobs;
+- alerts;
+- diagnostics;
+- event state and foreground reconciliation;
+- loading/empty/error/offline/stale/degraded states;
+- no production connection or mutation.
 
-Exit condition: UI works in a development build or simulator and passes tests without production access.
+Exit:
+
+- Android app/simulator behavior tests pass;
+- sidecar suite remains passing;
+- no VM change.
 
 ### Stage 2 — Remote read-only pilot
 
+Prerequisites:
+
+- administrator recovery proven;
+- fresh-session Docker privilege removal proven;
+- credential rotation/revocation complete;
+- durable WebUI/PM2 secret handling;
+- Cloudflare configuration reviewed.
+
 Included:
 
-- credential rotation complete;
-- sidecar deployed under dedicated identity;
-- Cloudflare Access enrollment and Tunnel;
-- trusted-device tokens and revocation;
-- mobile-owned database;
-- read-only Hermes adapters;
+- loopback sidecar under dedicated identity;
+- approved-email enrollment;
+- trusted-device access/refresh/revocation;
+- least-privilege mobile-control database;
+- explicit read-only Hermes adapters;
 - authenticated event relay;
-- redacted urgent alerts and push-token registration;
-- real Samsung connectivity tests.
+- read-only alerts and push-token registration;
+- Samsung remote lifecycle testing.
 
-Exit condition: operator can securely observe production Hermes from the Samsung device with no mobile mutation path.
+Exit:
+
+- operator observes production Hermes securely;
+- no mobile mutation path;
+- no direct origin bypass;
+- no master key on phone/WebView.
 
 ### Stage 3 — Governed chat and run controls
 
 Included:
 
-- session creation/resume/fork as permitted;
-- chat streaming;
+- accepted chat boundary from issue #6;
+- session create/resume/fork where permitted;
+- chat/run streaming;
 - normal run creation;
-- run status and event streaming;
-- stop/cancel after confirmation;
-- ownership mapping and idempotency;
+- stop/cancel confirmation and reconciliation;
+- ownership mapping;
+- idempotency;
 - unsupported-version read-only fallback.
 
-Exit condition: all actions are scoped, current, idempotent, and reconciled after network loss.
+Exit:
 
-### Stage 4 — Governed approvals and scheduled-job controls
+- all operations explicit, scoped, current, compatible, idempotent, auditable, and reconcilable after network loss.
+
+### Stage 4 — Governed approvals and job controls
+
+Prerequisites:
+
+- fixed SQLite runtime for every database-opening process;
+- candidate/current/previous update/rollback proven;
+- exact approval event schema captured;
+- device-signature proof tested.
 
 Included:
 
-- exact approval evidence;
 - approve once and deny;
+- full evidence and expiry;
 - biometric-backed device signature;
-- stale, expiry, duplicate, and unknown-outcome behavior;
+- stale/duplicate/timeout/unknown-outcome behavior;
 - manual job run with biometric step-up;
-- pause/resume with confirmation;
-- append-only audit evidence;
-- SQLite and update-pipeline gates complete.
+- job pause/resume confirmation;
+- append-only audit.
 
-Exit condition: the full Governed Operator MVP passes the end-to-end security and lifecycle matrix.
+Exit:
+
+- full Governed Operator MVP passes end-to-end security/lifecycle matrix.
 
 ---
 
-## Information Architecture and Interaction Decisions
+## Information Architecture
 
-### Main navigation
+### Primary navigation
 
-The application provides five primary destinations:
+- Command
+- Sessions
+- Jobs
+- Alerts
+- Settings
 
-- Command;
-- Sessions;
-- Jobs;
-- Alerts;
-- Settings.
+Approvals use a dedicated full-screen route opened from Command, Alerts, or an opaque push deep link.
 
-A dedicated full-screen Approval route is opened from Command, Alerts, or a push deep link. It is not reduced to a bottom-sheet confirmation.
-
-### Command Center ordering
-
-The home experience is ordered by operational importance:
+### Command Center priority
 
 1. pending approvals;
-2. failed or blocked runs;
+2. failed/blocked runs;
 3. active runs;
-4. Hermes and VM health;
+4. Hermes/VM health;
 5. recent sessions;
-6. scheduled jobs;
+6. jobs;
 7. quick chat entry.
 
-When a capability is not yet enabled, the UI must omit the action or show a clear gated state; it must not render a control that silently fails.
-
-### State presentation
-
-All server-backed screens support:
+### Required screen states
 
 - loading;
 - empty;
 - current;
 - stale/cached;
 - offline;
-- degraded dependency;
+- dependency degraded;
 - unauthorized/revoked;
-- unsupported version;
+- unsupported app/Hermes version;
 - sanitized error with correlation ID.
 
-A process being online is shown separately from detailed readiness.
-
-### Approval presentation
-
-The approval screen always refreshes the current request before enabling a decision. It presents normalized evidence and a visible expiry. The action button remains disabled when evidence is incomplete, expired, stale, or unsupported.
-
-### Notifications
-
-Notification taps navigate using opaque identifiers. The target screen fetches authoritative data. No approval decision is available directly from the Android lock screen.
+No gated action silently fails. It is omitted or visibly disabled with reason.
 
 ---
 
 ## Implementation Decisions
 
-### 1. Repository and module boundaries
+### 1. Repository boundaries
 
-The canonical product repository contains three principal modules:
+Modules:
 
-- **Mobile application:** Expo Router, React Native, NativeWind, and React Native Reusables.
-- **Mobile sidecar:** Node.js, TypeScript, Fastify, runtime schemas, authentication, authorization, rate limits, event relay, notifications, and data adapters.
-- **Shared contracts:** portable request, response, event, and error schemas that can be consumed by both mobile and server environments.
+- Expo/React Native mobile app;
+- Fastify/TypeScript sidecar;
+- portable runtime-validatable contracts.
 
-Shared contracts must not depend on Node filesystem APIs, Fastify, database drivers, Expo, or React Native.
+Shared contracts contain no Fastify, Node filesystem/database, Expo, or React Native implementation dependencies.
 
-The currently visible GitHub baseline uses Expo `56.0.13`, React Native `0.85.3`, React `19.2.3`, and Expo Router `56.2.12`. The MVP should preserve this working baseline unless a separate upgrade decision is accepted and tested.
+Preserve the current Expo 56/RN 0.85 baseline unless a separate tested upgrade is accepted.
 
-### 2. Hermes remains authoritative
+### 2. Hermes authority
 
-The sidecar never stores a second canonical copy of Hermes sessions, messages, runs, or jobs. It stores identifiers, watch state, alert lifecycle, digests, and audit evidence only.
+No canonical Hermes session/message/run/job copy is stored outside Hermes. The sidecar stores identifiers, watches, alert state, digests, compatibility, idempotency, and audit evidence only.
 
-All Hermes data is obtained through supported Hermes interfaces. Direct SQLite access is prohibited.
+No direct Hermes SQLite access.
 
 ### 3. Explicit sidecar API
 
-The sidecar exposes a finite mobile API, not a path-forwarding proxy.
+Representative reads:
 
-Representative read operations:
+- health and readiness;
+- Hermes status/capabilities/models/skills/toolsets;
+- session list/detail/messages;
+- job list/detail;
+- mobile alerts.
 
-- `GET /health`
-- `GET /ready`
-- `GET /v1/hermes/status`
-- `GET /v1/hermes/capabilities`
-- `GET /v1/hermes/models`
-- `GET /v1/hermes/skills`
-- `GET /v1/hermes/toolsets`
-- `GET /v1/sessions`
-- `GET /v1/sessions/{sessionId}`
-- `GET /v1/sessions/{sessionId}/messages`
-- `GET /v1/jobs`
-- `GET /v1/jobs/{jobId}`
-- `GET /v1/mobile/alerts`
+Representative identity operations:
 
-Representative device/authentication operations:
+- enrollment start/callback;
+- one-time PKCE exchange;
+- access refresh;
+- device list/revocation;
+- push token registration/rotation.
 
-- enrollment start and callback;
-- one-time code exchange;
-- token refresh;
-- device registration/list/revocation;
-- push-token registration and rotation.
-
-Representative governed operations, disabled until their release gates pass:
+Governed operations, stage-disabled by default:
 
 - session create/chat/fork;
 - run create/stop;
 - approval resolve;
 - job run/pause/resume.
 
-No endpoint accepts an arbitrary upstream URL, arbitrary Hermes path, or shell command.
+No arbitrary URL, upstream path, header forwarding, or command input.
 
-### 4. Hermes compatibility discovery
+### 4. Compatibility discovery
 
-The sidecar queries Hermes health, detailed readiness, and capabilities on startup and periodically. It records the observed Hermes version and required feature flags.
+Sidecar checks:
 
-Mutations require a compatible capability snapshot. If the version or feature set is unsupported:
+- `/health`;
+- `/health/detailed`;
+- `/v1/capabilities`;
+- observed Hermes version and required feature flags.
 
-- reads that remain safe may continue;
-- all affected mutations are disabled;
-- the mobile app displays an unsupported-version state;
-- the event is audited and may create an operational alert.
+A compatible snapshot is required for mutations. Safe reads may continue when explicitly classified.
 
-### 5. Network architecture
+### 5. Network
 
-Production ingress uses Cloudflare Tunnel to the loopback-only sidecar. Hermes API and WebUI remain loopback services behind controlled ingress.
+Production:
 
-Enrollment routes are protected by Cloudflare Access. The sidecar validates `Cf-Access-Jwt-Assertion` with the Cloudflare JWKS, expected issuer, and application audience.
+```text
+mobile-auth.egawilldoit.online → Access OTP → Tunnel → sidecar enrollment
+mobile-api.egawilldoit.online  → Tunnel → sidecar device authorization
+```
 
-Normal mobile API calls use sidecar-issued device tokens. Cloudflare remains an edge and transport protection layer; it does not replace application authorization.
+- sidecar `127.0.0.1:8790`;
+- Hermes `127.0.0.1:8642`;
+- signed Access JWT verified at enrollment origin;
+- real client IP trusted only from Cloudflare ranges;
+- no cache for auth/API/alerts/streams;
+- proxy buffering off for streams;
+- direct-origin bypass denied.
 
-Caching is disabled for authentication, API, alert, and stream responses. Streaming routes disable proxy buffering and use appropriate long-lived timeouts.
+### 6. Enrollment and token policy
 
-### 6. Enrollment and device authentication
-
-Enrollment uses Authorization Code plus PKCE semantics:
-
-1. The Android app creates a verifier, challenge, state, device identifier, and device key pair.
-2. The system browser opens the Cloudflare-protected enrollment route.
-3. Cloudflare authenticates the approved email.
-4. The sidecar validates the Access JWT and creates a short-lived one-time authorization code bound to the PKCE challenge and device request.
-5. A verified app link returns the code and state to the Android app.
-6. The app exchanges the code and verifier.
-7. The sidecar registers the device and issues a short-lived access token and rotating refresh token.
-
-The app does not place access or refresh tokens in deep-link parameters.
-
-### 7. Token policy
+1. App creates PKCE verifier/challenge, state, device ID, and device keypair.
+2. System browser opens Access-protected enrollment.
+3. Sidecar validates Access JWT and approved email.
+4. Sidecar creates 60-second single-use code bound to challenge/device/state.
+5. Verified App Link returns code/state.
+6. App exchanges code/verifier.
+7. Sidecar registers device and issues access/refresh credentials.
 
 Defaults:
 
-- access token lifetime: 10 minutes;
-- refresh token lifetime: 30 days;
-- refresh tokens rotate on every successful use;
-- server stores refresh-token hashes, not raw tokens;
-- reuse of an old refresh token revokes the token family;
-- device revocation invalidates refresh access and push registrations;
-- access token remains memory-resident where possible;
-- refresh token and device private key use Expo SecureStore.
+- access: 10 minutes;
+- refresh family: 30 days;
+- rotate every successful refresh;
+- store only refresh-token hashes server-side;
+- old-token reuse revokes family;
+- access token memory-resident where possible;
+- refresh token and private key in SecureStore/Keystore;
+- revocation removes refresh/push access.
 
-The sidecar attaches principal, device, Hermes instance, scopes, and correlation identity to every authenticated request.
+### 7. Authorization
 
-### 8. Authorization model
+Permission matrix fields:
 
-Authorization is explicit and deny-by-default.
+- scope;
+- release stage;
+- confirmation;
+- biometric/device-signature requirement;
+- idempotency;
+- audit;
+- compatibility;
+- ownership/entity access.
 
-A permission matrix maps each mobile operation to:
+Release One operator role does not bypass policy.
 
-- required scope;
-- permitted release stage;
-- confirmation requirement;
-- biometric step-up requirement;
-- idempotency requirement;
-- audit requirement;
-- compatibility requirement.
+### 8. Rate limiting
 
-The operator's Release One role does not bypass route policy. Future roles may narrow or expand explicitly classified capabilities.
-
-### 9. Rate limiting and abuse controls
-
-Limits exist at multiple dimensions:
+Dimensions:
 
 - edge/IP;
 - principal;
 - device;
 - route/operation;
-- token refresh;
-- approval attempt;
+- refresh;
+- approval;
 - run creation;
-- concurrent WebSocket connections and subscriptions.
+- concurrent WebSocket/subscriptions.
 
-Authenticated application limits do not depend solely on source IP. Rate-limit errors return a stable error code and retry metadata without leaking security policy internals.
+Reported local defaults (60/min general, 5/min refresh, 3 WebSockets/device) are provisional until issue #3 verifies code and tests. Production limits are configurable and authenticated limits never depend only on IP.
 
-### 10. Upstream Hermes transport
+### 9. Hermes transport
 
-The sidecar uses Hermes HTTP and SSE interfaces documented by Hermes:
+- REST for state/bounded mutation;
+- SSE for chat/run progress;
+- polling for reconciliation;
+- capabilities for optional behavior.
 
-- REST for current state and bounded mutations;
-- SSE for chat/run lifecycle streams;
-- polling as reconciliation fallback;
-- capability discovery before exposing optional behavior.
+Sidecar injects Hermes bearer key server-side and never returns/logs it.
 
-The Hermes master bearer token is injected server-side and never returned, logged, or accepted from the mobile client.
+### 10. Mobile event relay
 
-### 11. Mobile event relay
+One authenticated WebSocket may normalize Hermes lifecycle streams.
 
-The sidecar may normalize upstream lifecycle streams into one authenticated WebSocket endpoint for Android.
-
-The event envelope contains:
+Envelope:
 
 - event ID;
-- monotonic sequence within the relay scope;
+- bounded sequence;
 - event type;
-- Hermes instance identity;
-- entity type and identity;
-- occurred timestamp;
+- Hermes instance;
+- entity type/ID;
+- occurrence timestamp;
 - authoritative state version where available;
 - redacted payload.
 
-The relay supports:
+Relay:
 
 - heartbeat;
-- bounded replay;
-- `lastEventId` reconnect;
-- duplicate suppression;
-- bounded per-client queue;
+- bounded replay (reported local default 100 events);
+- `lastEventId`;
+- deduplication;
 - backpressure;
 - slow-client disconnect;
-- authorization per subscription;
-- current-state reconciliation after replay gaps.
+- subscription authorization;
+- current-state reconciliation after gaps.
 
-Token deltas are not written to the mobile-control database.
+No token-delta database writes.
 
-### 12. Android lifecycle behavior
+### 11. Android lifecycle
 
-When the app moves to the background:
+Background:
 
-- foreground streams may remain briefly during a grace period;
-- the app does not assume Android will keep a permanent connection alive;
-- the sidecar remains responsible for run observation and urgent alerts.
+- brief optional stream grace period;
+- no assumption of permanent Android connection;
+- sidecar remains monitor.
 
-When the app returns to active state:
+Foreground:
 
-- tokens are refreshed if needed;
-- event connection is re-established;
-- health, alerts, active runs, jobs, and visible session state are reconciled;
-- controls stay disabled until required current state is available.
+- refresh token if needed;
+- reconnect event relay;
+- reconcile health, alerts, active runs, jobs, and visible session;
+- keep mutations disabled until current state is available.
 
-### 13. Mobile-owned data model
+### 12. Mobile-control data model
 
-The mobile-control database includes the following logical entities:
+Logical tables:
 
-- principals;
-- devices;
-- refresh-token families;
-- device public keys;
-- Hermes instances;
-- watched runs;
-- approvals and evidence;
-- alerts;
-- push tokens;
-- notification preferences;
-- notification deliveries;
-- idempotency records;
-- audit events;
-- health snapshots.
+- `mobile_principals`;
+- `mobile_devices`;
+- `mobile_refresh_tokens`;
+- `hermes_instances`;
+- `run_watches`;
+- `mobile_approvals`;
+- `mobile_alerts`;
+- `push_tokens`;
+- `notification_deliveries`;
+- `notification_preferences`;
+- `idempotency_records`;
+- `audit_events`;
+- `health_snapshots`.
 
-Every relevant row includes principal and Hermes-instance identity; device identity is included where applicable.
+Relevant records include principal, device where applicable, and Hermes instance.
 
-No transcript, full raw tool output, provider secret, or full Hermes job database is copied into this store.
+Use non-public schema, dedicated role, least privilege, RLS defense in depth, append-only audit restrictions, and no service-role key in Android.
 
-### 14. Row-level security and database access
+### 13. Audit and idempotency
 
-Operational tables should reside in a non-public schema. The mobile app does not connect directly with a service-role credential. The sidecar uses a dedicated database role with only the grants it needs.
+Sensitive event fields:
 
-RLS is enabled as defense in depth. Append-only audit records cannot be updated or deleted by the normal sidecar role.
-
-### 15. Audit integrity
-
-Each sensitive operation creates an append-only audit event containing:
-
-- principal and device;
-- Hermes instance;
-- request and correlation IDs;
-- operation class;
-- canonical operation digest;
+- principal/device/instance;
+- request/correlation ID;
+- operation class/digest;
 - idempotency key;
-- decision and final outcome;
+- decision/final outcome;
 - timestamps;
-- previous-event hash and event hash where hash chaining is enabled.
+- optional previous hash/current hash.
 
-Audit entries contain normalized/redacted evidence, not secret values.
-
-### 16. Idempotency and mutation reconciliation
-
-Every mobile mutation carries an idempotency key.
-
-The sidecar records a durable operation state such as:
+Mutation states:
 
 - claimed;
 - forwarded;
@@ -587,55 +654,56 @@ The sidecar records a durable operation state such as:
 - outcome unknown;
 - reconciled.
 
-A duplicate request with the same key and equivalent payload receives the original result. A key reused with a different payload is rejected.
+Same key/same payload returns original result. Same key/different payload is rejected.
 
-When the upstream response is lost after forwarding, the sidecar queries current Hermes state before deciding whether a retry is safe.
+### 14. Approval policy
 
-### 17. Approval policy
-
-The initial mobile approval choices are:
+Choices:
 
 - approve once;
 - deny.
 
-Session-wide and permanent approval choices are not exposed in the MVP.
+Required checks:
 
-The sidecar normalizes and stores evidence required for review. A decision is accepted only when:
+- still pending;
+- unexpired;
+- operation digest matches;
+- required run/session state unchanged;
+- active device;
+- device-signature proof succeeds;
+- idempotency valid;
+- required evidence complete.
 
-- approval is still pending;
-- it has not expired;
-- the operation digest matches;
-- required run/session state has not changed;
-- the device is active;
-- biometric-backed device challenge verification succeeds for approval;
-- the idempotency key is valid.
+Target Hermes mobile approval configuration after controlled validation: manual mode and roughly 300-second timeout. Current smart/60-second audit configuration is not accepted as final policy.
 
-Approval configuration should use a manual mode and a timeout appropriate for mobile review after safe testing. The current audit-reported `smart` mode and 60-second timeout are not accepted as the final governed-mobile policy.
+### 15. Biometric and device proof
 
-### 18. Biometric-backed proof
+- Expo LocalAuthentication invokes Android Biometric Prompt.
+- Server does not trust `biometricSucceeded: true`.
+- Keystore-protected device key signs server nonce + operation identity/digest.
+- Sidecar verifies signature and device status.
+- cancellation/failure denies action.
 
-The app uses Expo LocalAuthentication to prompt Android biometrics for classified high-risk actions.
+Private APK policy:
 
-The server does not trust a client boolean stating that biometrics succeeded. Instead, the device private key is protected by secure device authentication and signs a server nonce containing the operation identity and digest. The sidecar verifies the signature and device state.
+- non-rooted, locked-bootloader Samsung is required;
+- suspected compromise disables high-risk controls;
+- basic root detection is advisory;
+- Play Integrity enforcement is deferred until compatible Play setup/distribution is accepted.
 
-### 19. Notification model
+### 16. Notification and alert model
 
-Expo Push Service is the initial delivery provider, backed by Android FCM credentials. The sidecar stores Expo and native device tokens when available to preserve future provider flexibility.
+Provider:
 
-Notification channels:
+- Expo Push Service backed by FCM;
+- retain Expo/native token where available.
+
+Channels:
 
 - approvals;
 - failures;
 - system-critical;
 - routine activity.
-
-Push body is generic and redacted. The payload contains opaque routing identifiers only.
-
-Token changes update registration. Invalid/uninstalled-device receipts disable stale tokens. Provider failure does not delete the authoritative alert.
-
-### 20. Alert lifecycle
-
-An alert has a stable deduplication key based on event class, Hermes instance, entity, and authoritative state version.
 
 Lifecycle:
 
@@ -645,93 +713,102 @@ Lifecycle:
 - acknowledged;
 - resolved.
 
-Repeated identical failures update occurrence metadata and follow suppression policy rather than creating unlimited pushes.
+Rules:
 
-### 21. Native and reused chat boundary
+- token-change listener;
+- reinstall/rotation handling;
+- receipt processing and `DeviceNotRegistered` cleanup;
+- generic body and opaque identifiers only;
+- dedup by class + instance + entity + state version;
+- default repeated-failure interrupt suppression 15 minutes;
+- configurable quiet hours;
+- provider outage keeps alerts authoritative;
+- notification permission denial/force-stop documented.
 
-The MVP uses native screens for sensitive controls and operational state.
+### 17. Native/reused chat
 
-The existing Hermes WebUI may be embedded or adapted for initial chat after a security proof covering:
+Sensitive controls are native.
 
-- allowed origins;
-- authentication handoff;
-- no Hermes master token in WebView JavaScript;
-- navigation escape prevention;
-- session and stream behavior;
-- Android keyboard, back, and lifecycle behavior.
+Initial chat implementation is decided by issue #6 after proof of:
 
-A fully native chat rewrite is deferred until pilot evidence demonstrates that reuse is insufficient.
+- origin/navigation allowlist;
+- credential handoff;
+- no master/refresh credential in WebView JS;
+- session/stream/tool behavior;
+- keyboard/back/lifecycle/reconnect;
+- measured latency and implementation cost.
 
-### 22. Android build and distribution
+A complete native rewrite is deferred until reuse proves insufficient.
 
-The first pilot uses a signed internal-distribution APK installed directly on the Samsung device.
+### 18. Build/distribution
 
-The target Android application identifier is `online.egawilldoit.hermes`, subject to collision validation before configuration.
+- Android internal signed APK;
+- package ID target `online.egawilldoit.hermes` after collision validation;
+- development/preview/production profiles;
+- preview for private pilot;
+- signing key backed up under operator control;
+- FCM project/credentials owned by operator/project;
+- remote notifications validated only in development/standalone build, not Expo Go;
+- OTA disabled until signing/runtime/rollback/min-version policy proven;
+- sidecar can require minimum app version and read-only fallback.
 
-Build profiles separate development, preview, and production. Preview is used for the private pilot. Signing credentials are backed up securely under operator control.
+### 19. Hermes updates and SQLite
 
-Remote push notifications require an Android development or standalone build; they are not accepted as validated through Expo Go alone.
+Automatic updates stay disabled.
 
-### 23. Application updates
+Promotion:
 
-Over-the-air application updates remain disabled for the first privileged pilot unless code-signing, runtime-version compatibility, rollback, and forced-minimum-version behavior are explicitly validated.
+```text
+candidate → validated → current → previous
+```
 
-The sidecar publishes a minimum supported app version. An outdated app enters read-only mode or blocks access according to the compatibility policy.
+Requires:
 
-### 24. Hermes update compatibility
+- no active run, approval, or delegated work;
+- isolated candidate;
+- health/capabilities/REST/SSE tests;
+- sidecar/WebUI compatibility;
+- rollback proof.
 
-The automatic production Hermes update timer remains disabled until a gated promotion process exists.
+Write controls require SQLite `3.50.7`, `3.51.3`, or another release containing the fix for every database-opening process, plus integrity/concurrency/restart/backup/rollback evidence.
 
-The promotion model is:
+`hermes update --yes` is not a presumed SQLite fix.
 
-- candidate;
-- validated;
-- current;
-- previous.
+### 20. Feature flags
 
-Promotion requires no active runs, no pending approvals, isolated candidate testing, capability/contract tests, sidecar and WebUI compatibility tests, and proven rollback.
-
-### 25. SQLite operational gate
-
-Production mobile write actions remain disabled until every process that opens Hermes databases uses a SQLite release containing the WAL-reset correction and passes integrity, concurrency, restart, backup, and rollback verification.
-
-This gate does not block mock work or a remote read-only pilot that does not increase database mutation authority.
-
-### 26. Feature flags
-
-At minimum, configuration includes flags equivalent to:
+At minimum:
 
 - Hermes integration mode;
-- mobile write actions enabled;
-- push delivery enabled;
+- mobile write actions;
+- push delivery;
 - database mode;
-- chat reuse enabled;
-- approval controls enabled;
-- scheduled-job controls enabled;
-- required Hermes capability/version policy.
+- chat reuse;
+- approval controls;
+- job controls;
+- required app/Hermes compatibility policy.
 
-Production startup fails when required secure configuration is absent. Development defaults remain mock and read-only.
+Development defaults remain mock/read-only. Production startup fails when required secure configuration is absent.
 
-### 27. Error contract
+### 21. Error contract
 
-The sidecar returns stable, sanitized error codes including:
+Stable sanitized codes cover:
 
-- authentication required or expired;
-- device revoked or untrusted;
+- auth required/expired;
+- device revoked/untrusted;
 - permission denied;
 - step-up required;
-- Hermes offline or degraded;
-- unsupported Hermes capability/version;
-- run/session/job not found;
+- Hermes offline/degraded;
+- capability/version unsupported;
+- entity not found;
 - state changed;
-- approval expired or stale;
+- approval expired/stale;
 - action outcome unknown;
-- stream disconnected or reconciling;
+- stream disconnected/reconciling;
 - push unavailable;
 - database unavailable;
 - update required.
 
-Every operational error includes a correlation ID. Raw provider, command, tool, or secret-bearing errors are not returned to Android.
+Every operational error has correlation ID. Raw provider/tool/command/secret-bearing errors never reach Android.
 
 ---
 
@@ -739,406 +816,314 @@ Every operational error includes a correlation ID. Raw provider, command, tool, 
 
 ### Security
 
-- No master/service/infrastructure credential in the APK.
+- No master/service/infrastructure credential in APK, WebView JS, logs, diagnostics, deep links, or push.
 - No generic proxy, arbitrary URL, shell, or command endpoint.
-- Sidecar runs as a dedicated unprivileged identity with no sudo or Docker access.
-- Unknown capabilities denied by default.
-- Sensitive tokens stored in SecureStore.
-- Cloudflare Access JWT validated at origin.
-- High-risk decisions require current evidence and device-bound proof.
-- Logs and diagnostics redact secrets and sensitive payloads.
-- Mobile-owned database uses least privilege and RLS defense in depth.
+- Dedicated unprivileged sidecar identity with no sudo/Docker/SSH/Hermes SQLite/broad home access.
+- Cloudflare Access JWT verified; real IP trusted only from Cloudflare.
+- Unknown capability denied.
+- Device compromise disables high-risk actions.
+- High-risk decisions require current evidence and device-bound signature.
+- Least-privilege database and RLS defense in depth.
 
 ### Reliability
 
-- Server observation continues when the phone is closed.
-- Reconnect is idempotent and state-reconciling.
-- Push is advisory; alert database is authoritative.
-- Mutations are idempotent and unknown outcomes are reconciled.
-- Service and compatibility failures degrade to read-only where safe.
+- Sidecar monitors while phone is closed.
+- Reconnect is bounded, idempotent, and reconciling.
+- Push advisory; alert DB authoritative.
+- Unknown mutation outcomes remain explicit.
+- Compatible reads may survive dependency degradation while writes fail closed.
 
 ### Performance
 
-- Streaming data is forwarded promptly and not persisted per token.
-- Lists are paginated.
-- Event history and queues are bounded.
-- Expensive catalog refreshes are rate limited and cached safely.
-- Health snapshots use short retention.
+- Prompt event forwarding; no per-token persistence.
+- Pagination for lists.
+- Bounded replay/queues/cache.
+- Rate-limited catalog refresh.
+- Short health retention.
 
 ### Privacy
 
-- Lock-screen notifications contain no command, prompt, path, repository, or tool-argument detail.
-- Audit and analytics contain normalized metadata rather than full transcripts.
-- No advertiser or third-party application receives conversation content through the mobile architecture.
+- No sensitive lock-screen details.
+- Audit contains normalized metadata, not full transcript/tool content.
+- No third-party analytics receives Hermes conversation/tool content in MVP.
 
 ### Accessibility
 
-- Android touch targets meet platform minimums.
-- Interactive elements have accessible names and states.
-- Severity is not communicated by color alone.
-- Loading and connection states are announced appropriately.
-- Biometric failure provides a safe cancel path, not an insecure bypass.
+- minimum Android touch targets;
+- accessible labels/states;
+- severity not color-only;
+- announced loading/connection state;
+- safe biometric cancel without bypass.
 
 ### Maintainability
 
-- Shared contracts remain portable.
-- Hermes adapters are explicit and capability-aware.
-- Tests assert external behavior.
-- Product decisions live in durable documentation.
-- Feature flags keep incomplete privileged capabilities disabled.
+- portable contracts;
+- explicit adapters;
+- behavior-level tests;
+- durable decision docs/issues;
+- incomplete privileged capabilities disabled by flags.
 
 ---
 
 ## Testing Decisions
 
-### Testing philosophy
+### Philosophy
 
-Tests verify externally observable behavior and policy boundaries rather than private implementation details. Existing seams are preferred. The ideal high-level seam is the **mobile-facing sidecar contract**, exercised against a deterministic mock Hermes service and the mobile application.
+Test externally observable behavior and policy boundaries. Prefer the highest stable seams.
 
-A second required seam is a bounded **real Hermes integration suite** that runs against an isolated compatible Hermes candidate or controlled production read-only surface. Real integration tests must not use destructive production state.
+### Seam 1 — Mobile-facing sidecar contract
 
-### Primary seams
+Run sidecar with test identity, test database, and deterministic Hermes fixtures/mock.
 
-#### Seam 1 — Mobile API contract
+Validates:
 
-Exercise the sidecar as an HTTP/WebSocket service with test identity, test database, and mock Hermes upstream.
+- schemas;
+- token issue/refresh/reuse/revocation;
+- authorization/allowlist;
+- rate limits;
+- errors/redaction;
+- relay/replay/dedup/backpressure;
+- alerts/notifications;
+- idempotency/audit;
+- feature gates.
 
-This seam validates:
+### Seam 2 — Android vertical slice
 
-- runtime schemas;
-- authentication and refresh rotation;
-- device revocation;
-- authorization and route allowlists;
-- rate limiting;
-- errors and redaction;
-- event normalization, replay, deduplication, and backpressure;
-- alert and notification lifecycle;
-- idempotency and audit records;
-- write-action feature gates.
+Render real navigation/screens against deterministic contracts.
 
-#### Seam 2 — Android vertical slice
-
-Render the real application navigation and screens against a deterministic sidecar/mock contract.
-
-This seam validates:
+Validates:
 
 - protected routes;
-- Command Center priority;
+- Command Center order;
 - sessions/jobs/alerts/diagnostics;
-- loading, empty, stale, offline, and error states;
-- foreground refresh;
-- connection/reconnect state;
+- all state presentations;
+- foreground reconciliation;
 - absence of unauthorized controls;
-- sanitized diagnostics.
+- secret-free diagnostics.
 
-#### Seam 3 — Hermes compatibility contract
+### Seam 3 — Exact Hermes compatibility
 
-Run read-only and safe disposable-workspace probes against the exact supported Hermes version/candidate.
+Use exact supported version/candidate and disposable safe state.
 
-This seam validates:
+Validates:
 
-- health and detailed readiness;
-- required capability flags;
-- session and job read operations;
-- run creation/event/stop only in an isolated safe environment;
-- approval event shape in a controlled non-destructive scenario;
-- timeout, restart, and unsupported-version behavior.
+- health/readiness/capabilities;
+- session/job reads;
+- safe isolated run/event/stop;
+- approval event schema;
+- timeout/restart/unsupported-version behavior.
 
-#### Seam 4 — Real Android pilot lifecycle
+### Seam 4 — Real Samsung pilot
 
-Use the signed preview APK on the actual Samsung device.
+Validates:
 
-This seam validates:
-
-- installation and signing;
-- secure enrollment and token persistence;
-- app links;
-- biometrics;
-- push channels and token rotation;
-- Wi-Fi/mobile switching;
-- background, termination, reboot, and battery optimization;
+- signing/install;
+- App Links/enrollment/token persistence;
+- biometrics/device key;
+- notification channels/token rotation;
+- Wi-Fi/mobile/airplane mode;
+- background/termination/reboot/battery optimization/force-stop limitation;
 - sidecar/Hermes restart;
-- revoked device and minimum-version behavior.
+- revocation/minimum version;
+- compromised-device policy.
 
-### Module test decisions
-
-#### Mobile application
-
-Test:
-
-- session provider and protected navigation;
-- API client and shared contracts;
-- Command Center composition;
-- sessions, jobs, alerts, approvals, and diagnostics behavior;
-- event provider and AppState reconciliation;
-- token/secret storage adapters;
-- notification navigation and redaction;
-- high-risk action gating.
-
-Do not test styling implementation details or private hook internals when screen-level behavior can prove the same requirement.
-
-#### Sidecar
-
-Test:
-
-- Cloudflare JWT verifier;
-- PKCE authorization-code exchange;
-- token rotation and reuse theft detection;
-- device revocation;
-- permission matrix;
-- per-dimension rate limiting;
-- Hermes explicit adapters;
-- compatibility policy;
-- event relay;
-- push provider and receipt processing;
-- idempotency and reconciliation;
-- approval binding;
-- audit append-only behavior;
-- error redaction and correlation IDs.
-
-#### Shared contracts
-
-Test:
-
-- valid payload acceptance;
-- invalid payload rejection;
-- compatibility across mobile and sidecar builds;
-- no platform-specific dependency leakage.
-
-### Security-negative tests
-
-Required negative tests include:
+### Required security-negative tests
 
 - missing/invalid/expired access token;
 - revoked device;
-- old refresh-token reuse;
-- mismatched PKCE verifier or state;
-- forged or wrong-audience Cloudflare JWT;
+- old refresh reuse;
+- PKCE/state mismatch;
+- forged/wrong-audience Access JWT;
+- spoofed real-IP header from untrusted origin;
 - unknown route;
-- arbitrary Hermes path or upstream URL;
-- oversized payload;
-- header injection;
-- path traversal;
-- log secret leakage;
-- Hermes master-key exposure;
-- subscription to an unauthorized entity;
-- stale or expired approval;
-- changed operation digest;
-- duplicate mutation tap;
-- unknown mutation outcome;
-- unsupported Hermes version;
+- arbitrary Hermes path/upstream URL;
+- oversized payload/header injection/path traversal;
+- secret log/response leak;
+- master-key exposure;
+- unauthorized event subscription;
+- stale/expired approval;
+- changed digest;
+- duplicate mutation;
+- unknown outcome;
+- unsupported version;
 - slow WebSocket consumer;
-- event duplication and out-of-order delivery;
-- write action while feature flag is disabled;
-- direct Hermes SQLite dependency.
+- duplicate/out-of-order event;
+- write while disabled;
+- direct Hermes SQLite dependency;
+- rooted/compromised device attempting high-risk action.
 
-### Operational tests
+### Operational tests before remote read-only
 
-Before remote pilot:
+- admin recovery and fresh-session privilege verification;
+- credential rotation/revocation ledger;
+- PM2/WebUI clean restart without secret repopulation;
+- Cloudflare unauthorized/authorized/JWT/origin-bypass/real-IP tests;
+- first-event latency and 10-minute stream survival;
+- sidecar restart/rollback;
+- push token rotation, receipts, provider outage, denied permission, invalid-token cleanup.
 
-- credential-rotation verification;
-- origin-bypass test;
-- Cloudflare Access unauthorized and authorized flows;
-- stream first-event latency and ten-minute survival;
-- sidecar restart and rollback;
-- disk/readiness alert generation;
-- push provider outage;
-- invalid push-token cleanup.
+### Operational tests before write controls
 
-Before write controls:
-
-- fixed SQLite runtime verification for every database-opening process;
-- copied-database concurrency and WAL tests;
-- Hermes candidate promotion and rollback;
-- active-run and pending-approval maintenance deferral;
-- approval evidence and device-signature end-to-end test.
+- fixed SQLite runtime for every database-opening process;
+- copied-database WAL/concurrency/integrity/restart tests;
+- candidate promotion/rollback;
+- active-work maintenance deferral;
+- exact approval evidence/device signature/idempotency/reconciliation end to end.
 
 ---
 
 ## Acceptance Criteria
 
-### Repository foundation
+### Gate A — Safe code foundation
 
-- The consolidated sidecar/contracts branch is pushed and reviewable.
-- Mobile, sidecar, and shared contracts build independently.
-- Mock mode is the default.
-- Production integration, push delivery, and write actions default to disabled.
-- No production secret exists in the repository.
-- Existing sidecar tests remain passing.
+- consolidated commits pushed and reviewed;
+- docs branch reconciled;
+- mobile/sidecar/contracts independently build;
+- exact API/OpenAPI contract reviewed;
+- 96 reported sidecar tests reproduced;
+- mock/read-only defaults;
+- no production connection, secret, or VM mutation.
 
 ### Android read-only vertical slice
 
-- The template home is replaced by the Command Center.
-- Protected navigation and mock sign-in/sign-out work.
-- Sessions, session messages, jobs, alerts, and diagnostics render.
-- Event connection, reconnect, stale, and offline states render.
-- App foregrounding triggers reconciliation.
-- No mutation control is available.
-- Mobile typecheck, lint, and tests pass.
+- Command Center replaces template home;
+- mock protected navigation works;
+- sessions/messages/jobs/alerts/diagnostics render;
+- connection/reconnect/stale/offline states render;
+- foreground reconciliation works;
+- no mutation control;
+- mobile/sidecar tests pass.
 
-### Remote read-only pilot
+### Gate B — Remote read-only pilot
 
-- Credential rotation is complete.
-- Sidecar runs loopback-only under the dedicated account.
-- Cloudflare Access and Tunnel tests pass.
-- Trusted-device enrollment, refresh, and revocation pass.
-- Mobile database and RLS/grants are reviewed.
-- Read-only adapters and event relay work against production Hermes.
-- No master credential reaches the phone.
-- Samsung network/lifecycle tests pass.
+- admin recovery and privilege state proven;
+- credentials rotated/revoked;
+- durable secret loading proven;
+- sidecar loopback-only under dedicated account;
+- Access/Tunnel/JWT/real-IP/origin tests pass;
+- trusted-device refresh/revocation pass;
+- least-privilege DB reviewed;
+- read-only Hermes/event relay works;
+- no master key reaches phone/WebView;
+- notifications and Samsung read-only lifecycle pass.
 
 ### Governed chat/run controls
 
-- Explicit permissions exist for every enabled operation.
-- Session/chat/run state is fetched from Hermes.
-- Stop behavior reconciles until terminal state.
-- Idempotency prevents duplicate execution.
-- Unsupported versions disable mutations.
-- Network-loss unknown outcomes reconcile before retry.
+- chat reuse/native boundary accepted;
+- every enabled operation has explicit policy;
+- Hermes remains source of truth;
+- stop reconciles to terminal state;
+- idempotency and unknown outcomes pass;
+- unsupported version disables writes.
 
-### Approval/job controls
+### Gate C — Approvals/job controls
 
-- SQLite runtime and update-pipeline gates pass.
-- Exact approval event schema is captured and supported.
-- Approve-once and deny only are available.
-- Approval digest, expiry, state binding, biometrics, and device signature pass.
-- Stale, duplicate, timeout, and changed-state tests pass.
-- Job run uses biometric step-up.
-- Pause/resume uses confirmation.
-- Audit evidence is append-only and complete.
+- SQLite/update gates pass;
+- exact approval schema captured;
+- approve-once/deny only;
+- evidence/digest/expiry/state/device signature pass;
+- stale/duplicate/timeout/changed-state pass;
+- manual job run biometric step-up;
+- pause/resume confirmation;
+- append-only audit complete.
 
-### Final MVP pilot
+### Final pilot
 
-- Signed APK installed on the Samsung device.
-- All security-negative and lifecycle tests pass.
-- Push notifications are redacted and actionable only through authoritative in-app state.
-- Lost-device revocation works.
-- Sidecar and Hermes rollback procedures are tested.
-- Documentation and runbooks match deployed behavior.
+- signed APK installed on Samsung;
+- complete security-negative/lifecycle matrix passes;
+- redacted push opens authoritative state;
+- lost/compromised device policy works;
+- sidecar/Hermes/app rollback proven;
+- docs/runbooks match deployment.
 
----
-
-## Release Gates
-
-### Gate A — Safe code foundation
-
-Required:
-
-- contracts, tests, mocks, and feature flags;
-- no production connection or VM mutation;
-- no secrets;
-- local branch pushed and reviewed.
-
-### Gate B — Remote read-only Android pilot
-
-Required:
-
-- credential rotation;
-- tested admin recovery and service stability;
-- sidecar deployment and read-only adapters;
-- Cloudflare Access/Tunnel validation;
-- trusted-device auth and revocation;
-- database least privilege;
-- Samsung lifecycle test.
-
-### Gate C — Governed write actions
-
-Required:
-
-- fixed SQLite runtime and integrity validation;
-- safe Hermes update promotion/rollback;
-- ownership and authority matrix implemented;
-- idempotency and unknown-outcome reconciliation;
-- exact approval-schema proof;
-- biometric-backed operation binding;
-- full audit and negative tests.
-
-No later gate may be bypassed because an earlier-stage demo appears functional.
+No later gate may be bypassed because an earlier demo appears functional.
 
 ---
 
 ## Out of Scope
 
-The following are outside this MVP:
-
-- iOS application and App Store release;
-- public Google Play production distribution;
-- general-purpose remote terminal;
+- iOS/App Store;
+- public Google Play production release;
+- general remote terminal;
 - sudo/root approval;
 - infrastructure secret management;
-- arbitrary VM service restart or configuration editing;
-- direct Hermes SQLite inspection or mutation;
-- a second session, run, job, scheduler, memory, or execution engine;
-- permanent or session-wide command approval from mobile;
-- autonomous infrastructure remediation;
-- multiple production Hermes installations in Release One;
-- team invitations and organization administration;
-- complete native rewrite of the Hermes chat renderer before pilot evidence;
-- voice interaction;
-- broad analytics that copy conversation or tool content;
-- EGA House Platform features or deployment ownership.
+- arbitrary service restart/config edit;
+- direct Hermes SQLite inspection/mutation;
+- second Hermes session/run/job/scheduler/memory/execution engine;
+- session-wide/permanent command approval;
+- autonomous infrastructure repair;
+- multiple production Hermes instances in Release One;
+- team invitations/organization administration;
+- mandatory fully native chat before reuse evidence;
+- voice;
+- analytics copying conversation/tool content;
+- EGA House product/deployment ownership.
 
 ---
 
 ## Further Notes
 
-### Current repository truth
+### Repository truth
 
-GitHub `main` currently exposes the initial Expo template only. The user reported a VM-local consolidated branch with the sidecar, shared contracts, mock API client, documentation, and 96 passing tests. Pushing and verifying that branch is the first repository gate.
+GitHub `main` still shows the initial template. Local consolidated implementation remains operator-reported until issue #3 pushes and verifies it. PR #1 contains this specification and Wayfinder record and must be reconciled with the implementation branch.
 
-### Current Hermes truth
+### Hermes truth
 
-The VM audit reported Hermes `0.19.0` at commit `92549c9a6e6e7c03a9cb945a2c4e75179a0e2d7d`, with the API server on loopback port `8642`. Deployment must validate the exact running `/v1/capabilities` rather than assuming current upstream `main` behavior.
+Deployment validates exact installed `/v1/capabilities` and exact event payloads. Upstream `main` is reference material, not proof of installed behavior.
 
 ### Security posture
 
-The remediation materially reduced privilege and secret-file exposure, but remote pilot readiness still requires rotation of previously exposed credentials and validation that secrets are not reintroduced through process persistence, backups, logs, or deployment scripts.
+File permission cleanup and systemd hardening materially reduce risk but do not replace credential rotation, recovery proof, application authorization, secret-persistence verification, or endpoint negative testing.
 
-### Read-only versus write risk
+### SQLite risk boundary
 
-The SQLite WAL-reset issue is treated as a blocker for production mobile write controls, not as a reason to stop Android UI development or the controlled remote read-only pilot. This distinction keeps product progress moving without hiding persistence risk.
+SQLite gate blocks production mobile write authority. It does not block mock UI or controlled read-only work. Remote read-only must not silently introduce new database writers.
 
-### Source provenance
+### VM change freeze
 
-Product and architecture decisions come from the Hermes Mobile planning conversation and the operator-provided VM audit/remediation summaries. Repository-version facts come from the checked-in package manifest and Expo configuration. External behavior and security guidance come from the official sources listed below.
+During mobile/sidecar code stages, agents do not modify sudoers, users/groups, Docker, systemd, nginx, Cloudflare, SSH, firewall, Python/SQLite, Hermes config/venv, PM2, timers, databases, or production secrets. Production operations happen as separate manually reviewed tasks with backup, validation, and rollback.
 
 ---
 
 ## Primary References
 
-### Planning method
+### Planning
 
 - [To-spec skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/to-spec/SKILL.md)
 - [Wayfinder skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/wayfinder/SKILL.md)
 
 ### Repository baseline
 
-- [Package manifest](../package.json)
-- [Expo configuration](../app.json)
-- [Root layout](../app/_layout.tsx)
+- [package.json](../package.json)
+- [app.json](../app.json)
+- [root layout](../app/_layout.tsx)
 
-### Hermes Agent
+### Hermes
 
-- [Hermes API Server documentation](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md)
-- [Hermes Programmatic Integration](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md)
-- [Hermes API server implementation](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py)
+- [API Server](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md)
+- [Programmatic Integration](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md)
+- [API implementation](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py)
+- [Desktop architecture](https://github.com/NousResearch/hermes-agent/blob/main/apps/desktop/README.md)
 
 ### Expo and React Native
 
-- [Expo Router authentication and protected routes](https://docs.expo.dev/router/advanced/authentication/)
-- [Expo authentication guide](https://docs.expo.dev/guides/authentication/)
-- [Expo SecureStore and device storage guidance](https://docs.expo.dev/develop/user-interface/store-data/)
-- [Expo LocalAuthentication](https://docs.expo.dev/versions/v54.0.0/sdk/local-authentication/)
-- [Expo Notifications for SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/)
-- [Expo push notifications overview](https://docs.expo.dev/push-notifications/overview/)
-- [Expo Internal Distribution](https://docs.expo.dev/build/internal-distribution/)
+- [Expo Router authentication](https://docs.expo.dev/router/advanced/authentication/)
+- [Expo authentication](https://docs.expo.dev/guides/authentication/)
+- [SecureStore SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/securestore/)
+- [LocalAuthentication SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/local-authentication/)
+- [Notifications SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/)
+- [Internal distribution](https://docs.expo.dev/build/internal-distribution/)
+- [React Native WebSocket](https://reactnative.dev/docs/global-WebSocket)
 - [React Native AppState](https://reactnative.dev/docs/appstate)
 
-### Cloudflare, data, and server security
+### Cloudflare, database, runtime, and device security
 
 - [Cloudflare One-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/)
 - [Cloudflare Access JWT validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
-- [Cloudflare common Access policies](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/common-policies/)
-- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Fastify ecosystem plugins](https://fastify.dev/docs/v5.7.x/Guides/Ecosystem/)
-- [SQLite Write-Ahead Logging and WAL-reset defect](https://sqlite.org/wal.html)
+- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+- [Cloudflare original visitor IP](https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/)
+- [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Fastify ecosystem](https://fastify.dev/docs/latest/Guides/Ecosystem/)
+- [SQLite WAL-reset bug](https://sqlite.org/wal.html#the_wal_reset_bug)
+- [Android Play Integrity verdicts](https://developer.android.com/google/play/integrity/verdicts)
+- [Docker group security warning](https://docs.docker.com/engine/install/linux-postinstall/)
