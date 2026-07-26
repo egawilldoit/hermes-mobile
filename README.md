@@ -1,66 +1,112 @@
 # Hermes Mobile
 
-Hermes Mobile is the Android control plane for the Hermes Agent installation running on the `openclaw` VM. It is being built as a **Governed Operator** surface: native operational screens, scoped device identity, a hardened sidecar, explicit permissions, resilient event streaming, redacted notifications, and evidence-bound approvals.
+Hermes Mobile is the Android governed control plane for the Hermes Agent installation running on the `openclaw` VM. The repository contains the Expo/React Native application, the hardened Fastify sidecar, portable mobile-sidecar contracts, and the product planning documents.
 
-## Product planning
+## Product authority
 
-- [Canonical Wayfinder issue](https://github.com/egawilldoit/hermes-mobile/issues/2) — live destination, decisions index, and implementation/evidence frontier.
-- [Hermes Mobile Wayfinder Map](docs/HERMES_MOBILE_WAYFINDER.md) — high-resolution decision record, current reality, risks, scope, and source links.
-- [Hermes Mobile MVP Specification](docs/HERMES_MOBILE_MVP_SPEC.md) — full product specification, user stories, architecture, contracts, security policy, testing seams, acceptance criteria, and release gates.
-- [Documentation pull request](https://github.com/egawilldoit/hermes-mobile/pull/1) — reviewable branch containing the planning artifacts.
+- [Canonical Wayfinder issue](https://github.com/egawilldoit/hermes-mobile/issues/2)
+- [Hermes Mobile Wayfinder Map](docs/HERMES_MOBILE_WAYFINDER.md)
+- [Hermes Mobile MVP Specification](docs/HERMES_MOBILE_MVP_SPEC.md)
+- [Tracker-published MVP specification](https://github.com/egawilldoit/hermes-mobile/issues/13)
+- [Hermes Mobile Linear project](https://linear.app/egawilldoit/project/hermes-mobile-c7f609dbec6e)
 
-## Current repository baseline
+## Repository structure
 
-GitHub `main` currently contains the initial Expo application template. It was created with:
-
-- [React Native](https://reactnative.dev/)
-- [Expo](https://expo.dev/)
-- [Expo Router](https://expo.dev/router)
-- [NativeWind](https://www.nativewind.dev/)
-- [React Native Reusables](https://reactnativereusables.com)
-
-Initialization command:
-
-```bash
-npx @react-native-reusables/cli@latest init
+```text
+hermes-mobile/
+├── app/                         # Expo Router application
+├── components/                  # React Native Reusables components
+├── lib/                         # Theme, utilities, and typed API client
+├── packages/contracts/          # Portable mobile-sidecar contracts
+├── services/hermes-sidecar/     # Fastify/TypeScript sidecar
+├── docs/                        # Architecture, Wayfinder, spec, and runbooks
+├── AGENTS.md                    # Repository-wide agent rules
+└── app.json                     # Expo configuration
 ```
 
-The operator reported a VM-local `feature/hermes-sidecar-integration` branch containing the consolidated sidecar, contracts, mock API client, and 96 passing sidecar tests. That state is tracked by [Publish and verify the consolidated Hermes Mobile foundation](https://github.com/egawilldoit/hermes-mobile/issues/3) until it is pushed and reproduced on GitHub.
+Scoped agent instructions also exist under `app/`, `packages/contracts/`, and `services/hermes-sidecar/`.
 
-## Development safety
+## Package-manager boundaries
 
-Until the staged release gates pass:
+- Root/mobile application: **pnpm** with `pnpm-lock.yaml`.
+- Sidecar: **npm** with `services/hermes-sidecar/package-lock.json`.
 
-- production Hermes integration remains disabled by default;
-- mobile write actions remain disabled;
-- push delivery remains disabled in mock development;
-- no Hermes, Cloudflare, Supabase service-role, provider, or infrastructure master credential belongs in the mobile repository or APK;
-- code-only work must not modify production VM configuration.
+Do not introduce another lockfile or convert either boundary without an authorized issue.
 
-## Getting started
+## Quick start
 
-Run the current Expo development server:
+### Mobile app
 
 ```bash
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm android
 ```
 
-The current scripts also expose Android, iOS, and web development commands. Android private pilot is the first supported product target; iOS is not a Release One gate.
-
-## Adding UI components
+### Sidecar
 
 ```bash
-npx react-native-reusables/cli@latest add [...components]
+npm ci --prefix services/hermes-sidecar
+npm --prefix services/hermes-sidecar run dev
+npm --prefix services/hermes-sidecar run typecheck
+npm --prefix services/hermes-sidecar test
+npm --prefix services/hermes-sidecar run openapi
 ```
 
-## Current technology baseline
+### Shared contracts
 
-- Expo Router
-- React Native New Architecture
-- NativeWind/Tailwind styling
-- React Native Reusables components
-- Typed Expo Router routes
-- Android internal APK as the first pilot distribution target
+```bash
+pnpm exec tsc -p packages/contracts/tsconfig.json --noEmit
+```
+
+The root package currently has no dedicated mobile lint or mobile test script. Do not claim those checks passed until the repository adds them.
+
+## Safe development defaults
+
+```env
+HERMES_INTEGRATION_MODE=mock
+MOBILE_WRITE_ACTIONS_ENABLED=false
+PUSH_DELIVERY_ENABLED=false
+DATABASE_MODE=test
+```
+
+These defaults mean local development does not connect to production Hermes, expose mobile write actions, deliver push notifications, or apply production database migrations.
+
+## Sidecar boundary
+
+The sidecar is a narrow authentication, authorization, compatibility, event-relay, notification, reconciliation, and audit boundary. It provides explicit allowlisted operations and must never become:
+
+- a generic proxy;
+- an arbitrary URL or header forwarder;
+- a shell or command runner;
+- a sudo/root or infrastructure-secret interface;
+- a direct Hermes SQLite client;
+- a second Hermes session, run, job, approval, scheduler, memory, or execution engine.
+
+See [services/hermes-sidecar/README.md](services/hermes-sidecar/README.md) and [docs/mobile-sidecar-contract.md](docs/mobile-sidecar-contract.md).
+
+## Current release direction
+
+Delivery is intentionally staged:
+
+1. Safe repository and contract foundation.
+2. Android read-only vertical slice.
+3. Remote read-only pilot through Cloudflare and the sidecar.
+4. Governed chat and run controls.
+5. Evidence-bound approvals, governed jobs, and signed Samsung pilot validation.
+
+Production capabilities remain disabled until the matching evidence and release gates in the MVP specification pass.
+
+## Development restrictions
+
+Code-only work must not:
+
+- modify sudoers, users/groups, Docker, systemd, nginx, Cloudflare, SSH, firewall, PM2, timers, Python/SQLite, Hermes configuration, production databases, or production secrets;
+- restart production services;
+- deploy automatically;
+- commit secrets, local databases, logs, caches, generated credentials, or build output.
+
+Production operations require explicit human authorization, backup, validation, and rollback evidence.
 
 ## Primary references
 
