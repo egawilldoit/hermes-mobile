@@ -1,63 +1,75 @@
 # Hermes Mobile Wayfinder Map
 
-**Status:** Direction established; implementation and operational evidence gates remain  
-**Last updated:** 2026-07-26  
-**Repository:** `egawilldoit/hermes-mobile`  
-**Destination:** A secure Android private-pilot application that lets the operator observe and govern the Hermes Agent running on the `openclaw` VM without placing Hermes master credentials, unrestricted shell access, or infrastructure secrets on the phone.
-
-## How to read this document
-
-This is the durable Wayfinder map for Hermes Mobile. It captures:
-
-- the destination;
-- the verified current state;
-- the decisions already made;
-- the remaining evidence gates on the frontier;
-- the fog that belongs to later releases; and
-- the work explicitly ruled out of the MVP.
-
-The map follows the intent of Matt Pocock's [Wayfinder skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/wayfinder/SKILL.md): decisions are separated from implementation work, the destination fixes scope, and unresolved work is kept on a visible frontier rather than hidden inside a large implementation prompt.
-
----
+**Status:** Direction established; implementation and production-evidence frontier remains open  
+**Version:** 1.1  
+**Last reviewed:** 2026-07-26  
+**Repository:** [`egawilldoit/hermes-mobile`](https://github.com/egawilldoit/hermes-mobile)  
+**Canonical tracker map:** [Wayfinder Map — Hermes Mobile Governed Operator MVP](https://github.com/egawilldoit/hermes-mobile/issues/2)  
+**Companion specification:** [Hermes Mobile MVP Specification](./HERMES_MOBILE_MVP_SPEC.md)
 
 ## Destination
 
-Deliver a private Android MVP for one operator on one production Hermes installation. The application must provide a native Command Center, read and manage Hermes sessions/runs/jobs through governed interfaces, surface urgent alerts, support full-screen evidence-based approvals, and remain safe across mobile disconnection, app suspension, Hermes restarts, and sidecar restarts.
+Deliver a secure Android private-pilot application for one operator and one production Hermes Agent installation on the `openclaw` VM.
 
-The destination is reached only when the app is installed and validated on the operator's Samsung device, all remote access passes through Cloudflare Tunnel and a hardened sidecar, no Hermes master credential exists on the phone, and all governed write operations satisfy the security and evidence gates in the MVP specification.
+The finished MVP provides:
+
+- a native operational Command Center;
+- secure session browsing and governed chat/run control;
+- scheduled-job visibility and explicitly permitted controls;
+- urgent, redacted notifications;
+- full-screen evidence-bound approvals;
+- reliable reconnect and state reconciliation;
+- device enrollment, revocation, and risk-based biometric step-up;
+- no Hermes master key, provider key, infrastructure secret, generic proxy, or arbitrary shell on the phone.
+
+The destination is reached only after the signed Android build passes the real Samsung lifecycle matrix and every enabled production mutation passes its security, compatibility, idempotency, audit, and rollback gates.
 
 ---
 
-## Notes
+## How Wayfinder is represented
 
-### Operating principles
+Matt Pocock's Wayfinder method treats the issue-tracker map as canonical and uses tickets to resolve decisions or evidence gates. This project therefore has two complementary artifacts:
 
-1. **Hermes remains the execution authority.** Hermes owns sessions, messages, runs, jobs, tool execution, model selection, skills, and native run state.
-2. **The mobile app is a governed control plane, not another agent runtime.** It may expose an allowed Hermes capability, but it must not duplicate Hermes' workflow engine or database.
-3. **The sidecar is a security boundary, not a generic proxy.** It authenticates devices, enforces explicit permissions, protects the Hermes master key, relays events, sends notifications, and records mobile-owned audit data.
-4. **Unknown capabilities fail closed.** A new Hermes endpoint or capability is unavailable until explicitly classified and tested.
-5. **Production uncertainty is shown, not hidden.** A timed-out mutation is reconciled before retry; an unknown outcome is never presented as failure or success.
-6. **No direct Hermes SQLite access.** Mobile and sidecar integrations use supported Hermes HTTP/SSE interfaces only.
-7. **Build in stages.** Read-only Android vertical slice first, then governed chat/run controls, then approvals and job controls after the operational gates pass.
-8. **Preserve the existing app.** The Expo application created in `/home/ubuntu/hermes-mobile` is the canonical mobile project; it is not to be replaced by a new scaffold.
+1. [GitHub issue #2](https://github.com/egawilldoit/hermes-mobile/issues/2) is the live canonical Wayfinder map and frontier index.
+2. This Markdown file is the durable high-resolution architecture and decision record stored with the code.
 
-### Source classes
+The available GitHub connector did not expose native sub-issue/dependency or label creation. Frontier issues link back to the map in their bodies. Native relationships and `wayfinder:*` labels can be added later without changing the substance of the map.
 
-This map distinguishes three kinds of evidence:
+Reference: [Wayfinder skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/wayfinder/SKILL.md).
 
-- **Repository facts:** visible in the GitHub repository, including [the current package manifest](../package.json) and [Expo configuration](../app.json).
-- **VM evidence:** supplied by the 2026-07-26 Hermes Mobile audit and remediation reports generated on `openclaw`, including the exact installed Hermes commit, endpoint probes, service state, security findings, and remediation results.
-- **Product decisions:** explicitly selected during the Hermes Mobile planning conversation on 2026-07-26.
+---
 
-Where an item is user-reported but not yet visible in GitHub, it is marked accordingly.
+## Evidence classes and confidence
+
+This map does not mix facts, decisions, and targets.
+
+### Repository-verified
+
+Visible in the GitHub repository or PR.
+
+### Operator-reported local implementation
+
+Reported from `/home/ubuntu/hermes-mobile` on the VM but not yet visible on GitHub. These claims remain provisional until the branch is pushed and tests are reproduced.
+
+### VM-audit evidence
+
+Reported by the four-agent read-only audit and remediation reports produced on `openclaw` on 2026-07-26.
+
+### Selected product policy
+
+Decisions explicitly selected in the planning conversation. They are requirements, not claims that production already implements them.
+
+### External primary-source guidance
+
+Behavior taken from official Hermes, Expo, React Native, Cloudflare, Supabase, Fastify, SQLite, Android, Docker, or systemd documentation.
 
 ---
 
 ## Current reality
 
-### GitHub-visible state
+### GitHub-visible baseline
 
-At the time this map was written, GitHub `main` contains the original React Native Reusables Expo template:
+At the time of this review, GitHub `main` contains the original React Native Reusables template:
 
 - Expo `~56.0.13`;
 - React Native `0.85.3`;
@@ -65,115 +77,170 @@ At the time this map was written, GitHub `main` contains the original React Nati
 - Expo Router `~56.2.12`;
 - NativeWind and React Native Reusables;
 - portrait orientation;
-- typed Expo Router routes enabled;
-- no Android package identifier configured yet;
-- no production authentication, notification, or Hermes connection configured.
+- typed Expo Router routes;
+- no Android package identifier yet;
+- no production authentication, push, Cloudflare, sidecar, or Hermes integration visible on `main`.
 
-The repository evidence is available in [package.json](../package.json), [app.json](../app.json), and [the initial README](../README.md).
+Sources:
 
-### User-reported local repository state
+- [package.json](../package.json)
+- [app.json](../app.json)
+- [root layout](../app/_layout.tsx)
 
-The operator reported that the VM-local branch `feature/hermes-sidecar-integration` contains three additional local commits that are not yet pushed:
+### Operator-reported consolidated local branch
 
-- repository boundary and documentation;
-- the hardened Hermes Mobile sidecar;
-- shared contracts and a mock mobile API client.
+The operator reported that local branch `feature/hermes-sidecar-integration` contains:
 
-The reported local structure is:
+- `1e4e37a` — repository structure;
+- `a6b478d` — hardened Hermes Mobile sidecar;
+- `806669d` — shared contracts, mock API client, and documentation;
+- 27 sidecar files;
+- 96/96 sidecar tests passing;
+- mock mode enabled by default;
+- write actions disabled;
+- no deployment or VM mutation.
+
+Reported structure:
 
 ```text
 hermes-mobile/
-├── app/                         # Expo Router application
-├── components/                  # React Native Reusables components
-├── lib/                         # mobile utilities and typed API client
+├── app/                         # preserved Expo Router application
+├── components/                  # preserved React Native Reusables UI
+├── lib/api-client.ts            # typed mobile API client
 ├── services/hermes-sidecar/     # Fastify sidecar
 ├── packages/contracts/          # portable shared contracts
 ├── docs/
 └── reports
 ```
 
-The sidecar is reported to have 96 passing tests, mock mode enabled by default, write actions disabled, and no production deployment. This state must be pushed and verified before it becomes repository-authoritative.
+Reported hardened-sidecar contract includes:
 
-### Verified Hermes runtime direction
+- device registration returning short-lived access and rotating refresh credentials;
+- token refresh with reuse/theft detection;
+- device revocation;
+- an authenticated mobile WebSocket event stream with `lastEventId` replay;
+- replay bounded to 100 events;
+- a reported default general limit of 60 requests/minute;
+- a reported refresh limit of 5 requests/minute;
+- a reported maximum of 3 concurrent WebSocket connections per device.
 
-The VM audit established that the installed Hermes gateway exposes a mobile-compatible HTTP/SSE control surface on loopback port `8642`, including:
+The exact route names reported were `POST /register`, `POST /token/refresh`, `DELETE /devices/:id`, and `GET /v1/mobile/events?lastEventId=`. They are **implementation evidence, not yet the final public contract**. Issue [Publish and verify the consolidated Hermes Mobile foundation](https://github.com/egawilldoit/hermes-mobile/issues/3) must push the branch, reproduce the tests, inspect OpenAPI/runtime schemas, and reconcile route naming before remote deployment.
 
-- health and detailed readiness;
-- machine-readable capabilities;
-- models, skills, and toolsets;
-- session CRUD, messages, forking, and streaming chat;
-- run creation, status, SSE events, stop, and approval;
-- scheduled-job CRUD and controls.
+### Installed Hermes runtime
 
-The exact audit reported Hermes commit `92549c9a6e6e7c03a9cb945a2c4e75179a0e2d7d` and version `0.19.0`. The API server itself has no WebSocket route; rich TUI JSON-RPC/WebSocket is a separate Hermes interface. The official protocol distinction is documented in [Hermes Programmatic Integration](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md) and [Hermes API Server](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md).
+The VM audit reported:
 
-### Verified operational posture
+- Hermes version `0.19.0`;
+- exact commit `92549c9a6e6e7c03a9cb945a2c4e75179a0e2d7d`;
+- API server bound to `127.0.0.1:8642`;
+- `/health`, `/health/detailed`, `/v1/capabilities`, models, skills, toolsets, sessions, jobs, runs, run SSE, stop, and approval endpoints;
+- no WebSocket route on the API server;
+- separate TUI-gateway JSON-RPC/WebSocket behavior associated with `hermes serve`/rich-client integration.
 
-The remediation work reportedly completed the following:
+The mobile architecture must validate the exact running `/v1/capabilities`; current upstream documentation cannot replace exact-commit runtime evidence.
 
-- removed unrestricted `NOPASSWD` sudo;
-- removed the operator from the Docker group;
-- added staged systemd hardening to Hermes Gateway;
-- corrected unsafe permissions on secret-bearing files;
-- sanitized the PM2 dump;
-- removed secret-bearing shell-history entries;
-- reduced disk usage from roughly 82% to 64%;
-- added nginx rate-limit zones and SSE buffering controls;
-- created the unprivileged `hermes-sidecar` account;
-- disabled the automatic daily Hermes update timer.
+Primary Hermes sources:
 
-Remaining operational gates include credential rotation, durable PM2 secret handling or migration, Cloudflare dashboard configuration, SQLite runtime remediation before production write operations, and a safe candidate/current/previous Hermes update pipeline.
+- [API Server](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md)
+- [Programmatic Integration](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md)
+- [API implementation](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py)
+- [Desktop architecture](https://github.com/NousResearch/hermes-agent/blob/main/apps/desktop/README.md)
+
+### VM remediation posture
+
+Operator-reported remediation completed:
+
+- unrestricted `NOPASSWD: ALL` removed;
+- `ubuntu` removed from the Docker group;
+- staged Hermes Gateway systemd hardening applied;
+- unsafe secret-file permissions corrected;
+- PM2 dump sanitized;
+- credential-bearing shell history cleaned;
+- disk use reduced from roughly 82% to 64%;
+- nginx rate-limit zones and SSE controls added;
+- unprivileged `hermes-sidecar` account created;
+- automatic Hermes update timer disabled.
+
+These changes do **not** prove remote readiness by themselves. Remaining evidence includes:
+
+- interactive administrator sudo and independent OCI/SSH recovery;
+- a fresh login proving old Docker supplementary-group access is gone;
+- rotation and revocation of the 19 reported exposed credentials;
+- durable WebUI/PM2 secret loading that does not repopulate secrets on `pm2 save` or reboot;
+- trusted Cloudflare real-client-IP restoration before origin IP limits are trusted;
+- confirmation that SSE uses `proxy_buffering off` or an upstream response `X-Accel-Buffering: no`, not only a request header;
+- exact Cloudflare Access/Tunnel and origin-bypass validation;
+- a fixed SQLite runtime before production write controls;
+- gated candidate/current/previous Hermes promotion and rollback.
+
+The systemd security score is a sandboxing indicator, not proof of application-level safety. Further risky VM changes remain frozen unless performed as a reviewed, backed-up, rollback-tested production operation.
 
 ---
 
 ## Decisions so far
 
-### 1. Product boundary — governed operator, not remote root
+### 1. Product boundary — Governed Operator
 
-Hermes Mobile is a **Governed Operator** application.
+Hermes Mobile is a governed control plane, not remote root and not another Hermes runtime.
 
-The MVP may:
+Permitted by the final MVP, subject to release gates:
 
-- observe Hermes and VM health;
+- observe Hermes and allowlisted VM health;
 - browse sessions and messages;
-- chat through approved Hermes interfaces;
-- start and stop governed runs;
-- review and resolve supported approvals;
-- view, run, pause, and resume scheduled jobs;
+- governed chat and session fork/resume;
+- start and stop normal governed runs;
+- view and control explicitly allowed scheduled-job operations;
+- approve one exact supported operation or deny it;
 - receive urgent operational alerts.
 
-The MVP may not:
+Prohibited:
 
-- expose arbitrary shell execution;
-- expose a generic upstream proxy;
-- approve sudo/root operations;
-- manage infrastructure secrets;
-- read or write Hermes SQLite directly;
-- become a second scheduler, session engine, or execution database.
+- generic `/proxy/*` or arbitrary Hermes path forwarding;
+- arbitrary shell or arbitrary upstream URL;
+- sudo/root approval;
+- infrastructure secret management;
+- direct Hermes SQLite access;
+- duplicate session/run/job/scheduler/memory engines;
+- autonomous infrastructure repair from mobile.
 
-### 2. Release model — one operator, multi-user-safe foundations
+### 2. Release model
 
-Release One is for the operator alone, but all mobile-owned records and authorization decisions must carry explicit principal, device, and Hermes-instance identity. No mobile-owned table may assume a singleton user or singleton Hermes installation.
+Release One supports:
 
-Team invitations, organization management, and multiple concurrently authorized humans are deferred, but the Release One schema must not prevent them.
+- one approved operator;
+- one production Hermes installation;
+- one or more trusted devices only when explicitly enrolled;
+- `principal_id`, `device_id`, and `hermes_instance_id` on mobile-owned state;
+- no singleton mobile records that prevent later multi-user or multi-instance support.
 
-### 3. Platform — Android private pilot
+Organization administration, invitations, and tenant isolation are later work.
 
-The first pilot is Android only and will be validated on the operator's modern Samsung device running Android 14 or later.
+### 3. Android private pilot
 
-The intended support floor is Android 10/API 29 unless the current Expo SDK establishes a stricter supported minimum. Android-specific lifecycle, notification channels, deep links, biometrics, signing, and battery-management behavior are release requirements. iOS must not block the MVP.
+- First platform: Android only.
+- Real pilot device: operator's modern Samsung running Android 14 or later.
+- Intended product support floor: Android 10/API 29, subject to the actual Expo/native build configuration.
+- Distribution: signed internal APK for the private pilot.
+- Google Play AAB distribution and iOS are not Release One gates.
+- Target package identifier: `online.egawilldoit.hermes`, subject to collision/signing validation.
+- OTA updates remain disabled for the first privileged pilot unless update signing, runtime compatibility, rollback, and minimum-version enforcement are proven.
 
-The pilot distribution mechanism is an internally distributed signed APK. Expo documents that an Android internal-distribution profile produces an installable APK, while an AAB is used for Google Play distribution: [Expo Internal Distribution](https://docs.expo.dev/build/internal-distribution/).
+Expo source: [Internal distribution](https://docs.expo.dev/build/internal-distribution/).
 
-### 4. Canonical repository — Hermes Mobile remains separate
+### 4. Canonical repository
 
-`egawilldoit/hermes-mobile` is the canonical product repository. The Android application, mobile sidecar, and portable shared contracts belong together here and remain separate from EGA House Platform.
+[`egawilldoit/hermes-mobile`](https://github.com/egawilldoit/hermes-mobile) owns:
 
-The existing Expo app is preserved. The project is not to be re-created, and it should not be restructured into a monorepo merely for appearance.
+- the existing Expo Android application;
+- the Hermes Mobile sidecar;
+- portable contracts;
+- mobile-specific docs and tests.
 
-### 5. Native-versus-reused UI boundary
+EGA House Platform remains separate. The existing Expo app is preserved rather than replaced or moved for aesthetic monorepo consistency.
 
-Native screens own the sensitive and operational surfaces:
+### 5. Native and reused UI boundary
+
+Native Android screens own sensitive and operational surfaces:
 
 - Command Center;
 - alerts;
@@ -182,433 +249,470 @@ Native screens own the sensitive and operational surfaces:
 - job controls;
 - device/session security.
 
-The initial chat surface may reuse the existing Hermes WebUI in a hardened WebView because it already understands Hermes chat behavior. Direct reuse of Hermes Desktop's Electron application is deferred; Electron-specific filesystem, window, updater, PTY, and IPC responsibilities are not appropriate for the Android shell.
+The initial chat surface is not yet proven. The accepted direction is:
 
-The open Hermes mobile work and `apps/shared` remain references, not an assumed production dependency. Reuse requires a separate proof that the exact renderer and transport can run safely with user-scoped credentials and without Electron coupling.
+- evaluate the existing responsive Hermes WebUI as the first reuse candidate;
+- keep Hermes Desktop/Electron direct reuse deferred;
+- treat `apps/shared` and open mobile work as references until exact transport and credential boundaries are proven;
+- select WebView/adapted reuse or native chat only after issue [Prove the initial chat-surface reuse boundary](https://github.com/egawilldoit/hermes-mobile/issues/6) measures security, latency, session behavior, keyboard, back navigation, and lifecycle behavior.
 
-### 6. Network model — Cloudflare Access and Tunnel
+No Hermes master key or sidecar refresh token may be exposed to WebView JavaScript.
 
-The selected production path is:
+### 6. Network — Cloudflare Access and Tunnel
+
+Selected production path:
 
 ```text
-Android application
+Android app
   → Cloudflare edge
   → Cloudflare Tunnel
-  → loopback-only Hermes Mobile sidecar
-  → loopback-only Hermes API
+  → 127.0.0.1:8790 Hermes Mobile sidecar
+  → 127.0.0.1:8642 Hermes API
 ```
 
-No new public VM listening port is required. The mobile sidecar binds to `127.0.0.1:8790`.
+Rules:
 
-Enrollment is protected by Cloudflare Access and an approved-email policy. Cloudflare's OTP flow sends a single-use PIN to an allowed email and the PIN expires after ten minutes: [Cloudflare One-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/).
+- no new public VM listening port;
+- enrollment hostname protected by Cloudflare Access email OTP and an allowlist containing only the approved operator email;
+- normal API hostname protected by Cloudflare edge controls plus sidecar-issued device tokens;
+- sidecar validates `Cf-Access-Jwt-Assertion` signature, issuer, audience, expiry, and approved identity during enrollment;
+- origin bypass must fail;
+- real client IP is accepted only through trusted Cloudflare ranges;
+- API/auth/stream responses are not cached;
+- streaming buffering and timeouts are explicitly tested.
 
-The origin must validate the signed `Cf-Access-Jwt-Assertion`, including signature, issuer, and audience, instead of trusting the header or browser cookie alone: [Cloudflare Validate JWTs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
+Sources:
 
-### 7. Authentication — Cloudflare enrollment plus trusted-device session
+- [Cloudflare One-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/)
+- [Validate Access JWTs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
+- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+- [Restore original visitor IPs](https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/)
 
-Cloudflare Access proves the operator's identity during enrollment; it is not used as the permanent API credential for every native request.
-
-The target flow is:
+### 7. Identity and trusted-device session
 
 ```text
 Cloudflare Access email verification
-  → one-time authorization code bound to PKCE
+  → sidecar validates Access JWT
+  → one-time authorization code bound to PKCE and state
+  → verified Android App Link
   → trusted-device registration
-  → short-lived sidecar access token
-  → rotating refresh token
-  → authorized Hermes operation
+  → 10-minute access token
+  → rotating 30-day refresh-token family
 ```
 
-Defaults:
+Rules:
 
-- authorization code: 60 seconds, single use;
-- access token: 10 minutes;
-- refresh token family: 30 days;
-- refresh-token reuse: revoke the token family and device session;
-- device loss: server-side revocation removes refresh access and push registration.
+- email verification is not required on every app launch;
+- authorization code lasts 60 seconds and is single-use;
+- tokens are never placed in deep-link parameters;
+- access token is memory-resident where possible;
+- refresh token is stored in Expo SecureStore;
+- device private key is Android Keystore-backed and protected by device authentication;
+- refresh-token reuse revokes the token family and device session;
+- lost-device revocation removes refresh access and push registration.
 
-Small device secrets and tokens are stored with Expo SecureStore, not AsyncStorage. Expo documents SecureStore as encrypted native storage intended for small secrets and tokens: [Expo SecureStore](https://docs.expo.dev/develop/user-interface/store-data/).
+Sources:
 
-### 8. Sidecar boundary — explicit adapters only
+- [Expo authentication](https://docs.expo.dev/guides/authentication/)
+- [Expo SecureStore](https://docs.expo.dev/versions/v56.0.0/sdk/securestore/)
+- [Expo Linking](https://docs.expo.dev/linking/overview/)
 
-The Node.js/TypeScript/Fastify sidecar is required because the Hermes API uses one powerful server credential and exposes terminal-capable agent behavior. The phone never receives that credential.
+### 8. Device integrity policy
 
-The sidecar owns:
+For the sideloaded private APK:
 
-- enrollment and trusted-device sessions;
-- explicit route authorization;
-- request/response validation;
+- the supported pilot device must be non-rooted with a locked bootloader and current security updates;
+- simple JavaScript root detection is advisory and is not a security boundary;
+- when device compromise is detected or credibly suspected, high-risk controls and approval signing are disabled and the device can be revoked;
+- biometric failure or cancellation has no insecure bypass;
+- Google Play Integrity is a later enforcement option when Play distribution or a validated compatible setup exists; it is not assumed to protect the private sideloaded APK.
+
+Android source: [Play Integrity verdicts](https://developer.android.com/google/play/integrity/verdicts).
+
+### 9. Sidecar boundary
+
+The Node.js/TypeScript/Fastify sidecar owns:
+
+- enrollment and trusted-device tokens;
+- explicit operation adapters and runtime schemas;
 - Hermes master-key custody;
-- per-IP, principal, device, endpoint, and operation rate limits;
-- SSE observation and mobile event relay;
-- urgent alert creation and push delivery;
+- authorization and deny-by-default compatibility policy;
+- rate limits by edge/IP, principal, device, operation, refresh, approval, run, and connection;
+- Hermes SSE observation and mobile event relay;
+- urgent alerts and push delivery;
 - allowlisted VM health;
-- idempotency and audit evidence;
-- compatibility checks against Hermes capabilities.
+- idempotency, reconciliation, and audit evidence;
+- mobile-control database access through least privilege.
 
-The sidecar does not own:
+It does not own Hermes truth and never reads Hermes SQLite.
 
-- Hermes sessions or messages;
-- Hermes run truth;
-- Hermes scheduled-job truth;
-- agent execution;
-- a generic `/proxy/*` route;
-- arbitrary URLs or commands;
-- Hermes SQLite access.
+Production runtime identity:
 
-Fastify maintains supported ecosystem plugins for route rate limiting and WebSocket support: [Fastify Ecosystem](https://fastify.dev/docs/v5.7.x/Guides/Ecosystem/).
+- dedicated `hermes-sidecar` account;
+- no sudo, Docker, SSH keys, or broad home access;
+- loopback bind `127.0.0.1:8790`;
+- directional shared-input/output access only when a feature requires it.
 
-### 9. Transport — REST/SSE upstream, mobile event relay
+Fastify source: [Fastify ecosystem](https://fastify.dev/docs/latest/Guides/Ecosystem/).
 
-Hermes HTTP and SSE are the authoritative upstream transport for the MVP.
+### 10. Transport and maximum-latency strategy
 
-- REST is used for current state and bounded mutations.
-- Hermes run/session SSE is used for foreground progress and server observation.
-- The sidecar normalizes event streams into one authenticated mobile WebSocket connection when this improves React Native reconnection and multiplexing.
-- Token deltas are not persisted to Supabase.
-- Lifecycle milestones and alert state may be persisted.
+- Hermes HTTP/SSE is the authoritative upstream MVP transport.
+- API port `8642` is not treated as WebSocket-capable.
+- REST fetches current state and performs bounded mutations.
+- Hermes SSE carries chat/run lifecycle progress.
+- Sidecar may normalize/multiplex lifecycle events into one authenticated React Native WebSocket connection.
+- React Native EventSource support is not assumed as a core guarantee.
+- Token deltas are forwarded promptly and not written to Postgres.
+- Lifecycle milestones, alert state, and audit evidence may be persisted.
 
-Mobile events carry an event ID, sequence number, entity identity, authoritative state version where available, and timestamp. Reconnect uses `lastEventId`, bounded replay, deduplication, and current-state reconciliation.
+Mobile relay semantics:
 
-When the Android app returns to the foreground, it refreshes authoritative state. React Native's `AppState` API reports foreground/background transitions and is explicitly suitable for notification and lifecycle handling: [React Native AppState](https://reactnative.dev/docs/appstate).
+- event ID;
+- bounded monotonic sequence within relay scope;
+- event type and entity identity;
+- `hermes_instance_id`;
+- timestamp;
+- authoritative state version when available;
+- redacted payload;
+- heartbeat, bounded replay, `lastEventId`, deduplication, backpressure, slow-client disconnect, and reconciliation after gaps.
 
-### 10. Data ownership — Hermes truth versus mobile-control truth
+Initial reconnect policy:
 
-Hermes remains authoritative for:
+- 250 ms, 500 ms, 1 s, 2 s, 5 s, 10 s, then 15 s maximum with jitter;
+- heartbeat around every 20 seconds;
+- stale after roughly 45 seconds without expected activity;
+- values remain configurable and must be measured on the Samsung/Cloudflare path.
 
-- sessions and messages;
-- runs and run events;
-- scheduled jobs;
-- native approval state;
-- models, providers, skills, and toolsets;
-- agent memory and execution configuration.
+React Native sources:
 
-The mobile-control database owns:
+- [WebSocket](https://reactnative.dev/docs/global-WebSocket)
+- [AppState](https://reactnative.dev/docs/appstate)
 
-- principals and trusted devices;
+### 11. Background observation
+
+The phone is not the monitor.
+
+- foreground stream may stay alive for a short grace period;
+- Android suspension/termination is expected;
+- sidecar continues run/job/health observation;
+- push alerts urgent changes;
+- foreground resume refreshes tokens, reconnects, replays where possible, and fetches authoritative state before enabling controls.
+
+Initial server observation defaults:
+
+- active run SSE: continuous;
+- active run fallback status: 5 seconds;
+- job reconciliation: 15 seconds;
+- Hermes detailed readiness: 30 seconds;
+- allowlisted VM health: 60 seconds;
+- push receipt processing: provider-recommended delayed receipt window, initially around 15 minutes.
+
+These are configurable defaults, not guaranteed Hermes timings.
+
+### 12. Data ownership
+
+Hermes owns:
+
+- sessions, messages, runs, run events, jobs, native approval state;
+- models, providers, skills, toolsets, memory, and execution configuration.
+
+Mobile-control Postgres owns:
+
+- principals and devices;
 - refresh-token families and device public keys;
-- push tokens and notification preferences;
-- alerts and delivery receipts;
+- Hermes-instance metadata;
 - watched-run references;
-- mobile approval evidence;
+- approval evidence;
+- alerts, preferences, push tokens, and delivery receipts;
 - idempotency records;
 - append-only audit events;
-- Hermes-instance metadata;
-- short-retention health snapshots.
+- short-retention health samples.
 
-The mobile application never receives a Supabase service-role key. Supabase documents that service-role keys bypass Row Level Security and must never be exposed to customers: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+Rules:
 
-### 11. Authority matrix — capability plus risk policy
+- non-public schema;
+- dedicated least-privilege sidecar role;
+- RLS defense in depth;
+- no client service-role key;
+- no full transcript, full raw tool output, provider secret, or copied Hermes job/session database.
 
-The mobile application may expose a Hermes capability only through an explicit sidecar permission.
+Initial retention targets:
 
-| Capability | MVP policy |
+| Data | Retention target |
+|---|---:|
+| Active refresh token | Until expiry/revocation |
+| Revoked token-family hashes | 90 days |
+| Alerts | 90 days |
+| Notification deliveries | 30 days |
+| Approval evidence | 1 year |
+| Audit events | At least 1 year |
+| Health samples | 7 days |
+| Terminal run watches | 7 days after completion |
+| General idempotency | 24 hours |
+| Approval idempotency/evidence | 7 days or audit retention as required |
+
+Source: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+
+### 13. Authority matrix
+
+| Capability | Release One policy |
 |---|---|
-| View health, capabilities, models, skills, toolsets | Allowed |
-| View sessions and messages | Allowed |
-| Create/resume/fork session | Allowed in governed-control stage |
-| Send chat prompt | Allowed in governed-control stage |
-| Start normal governed run | Allowed in governed-control stage |
-| Stop/cancel run | Explicit confirmation |
-| List jobs | Allowed |
+| Health, readiness, capabilities, models, skills, toolsets | Read allowed |
+| Sessions/messages | Read allowed |
+| Session create/resume/fork | Governed-control stage |
+| Send chat prompt | Governed-control stage |
+| Start normal run | Governed-control stage |
+| Stop/cancel run | Explicit confirmation and reconciliation |
+| List jobs | Read allowed |
 | Run job now | Biometric step-up |
 | Pause/resume job | Explicit confirmation |
 | Create/edit job | Deferred unless separately accepted |
-| Delete job or session | Biometric plus typed confirmation; may be deferred |
-| Approve exact operation once | Biometric step-up |
-| Deny approval | Allowed after evidence review |
-| Approve for session/always | Not exposed in initial MVP |
+| Delete job/session | Deferred by default; biometric + typed confirmation if accepted |
+| Approve exact operation once | Biometric-backed device signature |
+| Deny approval | Allowed after current evidence review |
+| Session-wide/permanent approval | Not exposed |
 | Sudo/root approval | Prohibited |
-| Arbitrary shell or VM administration | Prohibited |
+| Secret submission | Prohibited in initial MVP |
+| Arbitrary shell/VM administration | Prohibited |
 | Unknown capability | Denied by default |
 
-### 12. Approval contract — evidence bound to one exact operation
+### 14. Approval contract
 
-A biometric prompt alone is not approval evidence. The displayed decision must be cryptographically and transactionally bound to the exact operation.
+Approval is enabled only after the exact installed Hermes event schema is proven.
 
-An approval request records:
+Required normalized evidence:
 
-- approval identity;
-- Hermes instance, run, and session identity;
+- approval, Hermes-instance, run, and session identity;
 - tool and canonical arguments;
 - command and working directory when applicable;
 - affected resources and blast radius;
 - risk classification;
 - requested and expiry timestamps;
 - operation digest;
-- current run state/version where Hermes exposes one.
+- current state/version if Hermes exposes one.
 
-The flow is:
+Flow:
 
 ```text
-urgent alert
-  → open full approval screen
-  → refresh authoritative state
-  → display exact evidence
+redacted urgent push
+  → full approval screen
+  → authoritative refresh
+  → exact evidence
   → biometric step-up
-  → device signs server challenge and operation digest
-  → sidecar verifies device, expiry, digest, and current state
-  → sidecar submits approve-once or deny
-  → reconcile final Hermes state
+  → device signs server nonce + operation digest
+  → sidecar verifies device, digest, expiry, state, and idempotency
+  → approve-once or deny
+  → reconcile Hermes outcome
   → append audit event
 ```
 
-Duplicate taps reuse an idempotency key. A timeout triggers reconciliation, not an automatic retry. If the operation or run state changed, the approval is stale and a new review is required.
+- no lock-screen approval;
+- no client boolean as proof of biometrics;
+- duplicate tap returns original idempotent result;
+- timeout triggers reconciliation, not blind retry;
+- changed state makes the request stale;
+- missing evidence disables approval.
 
-### 13. Biometrics — risk-based, not universal
+Target Hermes approval policy after controlled testing: manual mode, roughly 300-second review timeout. Current audit-reported smart/60-second policy is not the final mobile policy.
 
-No biometric prompt is required for ordinary viewing, chat, or starting a normal governed run.
+Source: [Expo LocalAuthentication](https://docs.expo.dev/versions/v56.0.0/sdk/local-authentication/).
 
-Biometric step-up is required for:
+### 15. Notifications
 
-- approving an exact tool/command operation once;
-- manually running a scheduled job;
-- other high-risk mutations explicitly classified by policy.
-
-Stopping a run and pausing/resuming a job require explicit confirmation; destructive deletion may require biometrics plus typed confirmation.
-
-Expo LocalAuthentication provides Android Biometric Prompt integration: [Expo LocalAuthentication](https://docs.expo.dev/versions/v54.0.0/sdk/local-authentication/).
-
-### 14. Notifications — alert inbox is authoritative
-
-The MVP uses Expo Push Service on Android, backed by FCM credentials, for urgent events. Push is best-effort delivery; the server-side alert record is authoritative.
-
-Urgent event classes are:
+Urgent classes:
 
 - approval required;
 - run failed or blocked;
-- Hermes unavailable or critically degraded;
-- scheduled job failure;
+- Hermes unavailable/critically degraded;
+- scheduled-job failure;
 - authentication/security event;
-- critical disk or database event.
+- critical disk/database event.
 
-Routine successes appear in the application but do not interrupt the operator.
+Routine success stays in-app.
 
-Notification contents are redacted. Lock-screen text is generic and contains an opaque alert ID, not commands, prompts, repositories, paths, tool arguments, or raw errors. Tapping opens the authoritative screen and refreshes current state.
+Rules:
 
-Android channels separate approvals, failures, system-critical alerts, and routine activity. Expo documents Android notification channels, token-change listeners, and the need for a development build for remote notifications on modern SDKs: [Expo Notifications](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/).
+- Expo Push Service with FCM for the first pilot;
+- store Expo and native FCM tokens when available;
+- token-change listener updates registration;
+- reinstall/token rotation invalidates old registration;
+- process receipts and disable `DeviceNotRegistered` tokens;
+- alert database is authoritative; push is best-effort;
+- notification payload contains opaque routing identifiers only;
+- lock-screen text is generic;
+- Android channels: approvals, failures, system-critical, routine activity;
+- stable deduplication key uses event class + Hermes instance + entity + state version;
+- repeated unresolved failure produces at most one interrupting push per 15 minutes by default while occurrence count updates in-app;
+- quiet hours suppress non-critical pushes; approval/security/system-critical policy is explicit and configurable;
+- provider outage preserves alerts and reconciles delivery later;
+- Android force-stop limitation is documented.
 
-### 15. Command Center — operational priority order
+Expo source: [Notifications SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/).
 
-The home screen is a Command Center ordered by operational urgency:
+### 16. Command Center
+
+Operational order:
 
 1. pending approvals;
-2. failed or blocked runs;
+2. failed/blocked runs;
 3. active runs;
 4. Hermes and VM health;
 5. recent sessions;
 6. scheduled jobs;
-7. quick entry to chat.
+7. quick chat entry.
 
-The read-only vertical slice initially renders the same hierarchy with mutating controls absent or explicitly disabled.
+The read-only vertical slice uses the same hierarchy with mutations absent or visibly gated.
 
-### 16. Update compatibility — no blind daily promotion
+### 17. Update compatibility
 
-The previous daily update timer has been disabled. Production Hermes remains pinned until a candidate/current/previous promotion pipeline exists.
+Production Hermes remains pinned while automatic maintenance is disabled.
 
-Candidate promotion requires:
+Promotion model:
 
-- no active run or pending approval;
-- adequate disk and healthy current service;
-- isolated candidate runtime and state;
-- detailed health and capability checks;
-- REST/SSE contract tests;
-- sidecar compatibility tests;
-- WebUI compatibility tests;
-- tested rollback to the previous version.
+```text
+candidate → validated → current → previous
+```
 
-An unsupported Hermes version puts the mobile application into read-only mode and disables write actions.
+Required before promotion:
 
-### 17. SQLite — operational gate before production write controls
+- no active runs, pending approvals, or delegated work;
+- current health and adequate disk;
+- isolated candidate runtime/state;
+- health, detailed readiness, capabilities, REST/SSE contracts;
+- sidecar and WebUI compatibility;
+- tested rollback.
 
-The audit reported Python's SQLite runtime as `3.50.4`, while SQLite documents a WAL-reset corruption defect affecting releases through `3.51.2`, with backported fixes including `3.50.7` and a fix in `3.51.3`: [SQLite WAL documentation](https://sqlite.org/wal.html).
+Unsupported Hermes or mobile version degrades to read-only where safe.
 
-This does not prevent mock development or the read-only mobile UI, but production mobile write controls remain gated until every process that opens Hermes databases uses a fixed runtime and passes backup, integrity, concurrency, restart, and rollback tests.
+### 18. SQLite gate
+
+The audit reported Python SQLite `3.50.4`. SQLite documents the WAL-reset issue through `3.51.2`, fixed in `3.51.3` with backports including `3.50.7` and `3.44.6`.
+
+Rules:
+
+- this does not block mock development or Android read-only UI;
+- remote read-only pilot may proceed only when it does not add unsafe database mutation authority;
+- production mobile write controls remain disabled until every database-opening process uses a fixed runtime and passes backup, integrity, concurrency, restart, and rollback tests;
+- `hermes update --yes` is not accepted as an unverified SQLite fix.
+
+Source: [SQLite WAL-reset bug](https://sqlite.org/wal.html#the_wal_reset_bug).
 
 ---
 
-## Frontier — work that can be specified now
+## Frontier
 
-These are the next takeable work packages. They are implementation/evidence tasks, not reopened product decisions.
+The canonical frontier is tracked in GitHub:
 
-### Push and verify the consolidated repository branch
+1. [Publish and verify the consolidated Hermes Mobile foundation](https://github.com/egawilldoit/hermes-mobile/issues/3)
+2. [Build the Android read-only Command Center vertical slice](https://github.com/egawilldoit/hermes-mobile/issues/4)
+3. [Close administrator recovery, credential rotation, and secret-persistence gates](https://github.com/egawilldoit/hermes-mobile/issues/5)
+4. [Prove the initial chat-surface reuse boundary](https://github.com/egawilldoit/hermes-mobile/issues/6)
+5. [Deploy Cloudflare enrollment, Tunnel, real-IP, and origin protection](https://github.com/egawilldoit/hermes-mobile/issues/7)
+6. [Deploy the read-only sidecar and mobile-control database](https://github.com/egawilldoit/hermes-mobile/issues/8)
+7. [Prove notification delivery, rotation, suppression, and outage behavior](https://github.com/egawilldoit/hermes-mobile/issues/9)
+8. [Prove the exact Hermes approval schema and operation binding](https://github.com/egawilldoit/hermes-mobile/issues/10)
+9. [Resolve the SQLite runtime and gated Hermes update pipeline](https://github.com/egawilldoit/hermes-mobile/issues/11)
+10. [Validate the signed Samsung pilot lifecycle and device-integrity policy](https://github.com/egawilldoit/hermes-mobile/issues/12)
 
-**Question resolved by evidence:** Does GitHub contain the same sidecar, contracts, documentation, and passing tests reported on the VM-local branch?
+Dependency order is staged rather than implied by issue number:
 
-Completion evidence:
-
-- branch pushed;
-- commit SHAs visible;
-- CI or reproduced test output confirms the sidecar suite;
-- no production secrets in the branch.
-
-### Build the Android read-only vertical slice
-
-**Question resolved by evidence:** Can the existing Expo app consume shared/mock contracts and provide the intended Command Center information architecture without touching production?
-
-Completion evidence:
-
-- protected app shell;
-- Command Center, sessions, jobs, alerts, and diagnostics screens;
-- loading, empty, stale, offline, and error states;
-- event reconnection and foreground refresh;
-- mobile typecheck/lint/tests pass;
-- all sidecar tests remain passing.
-
-### Complete credential rotation
-
-**Question resolved by evidence:** Are all credentials that appeared in unsafe files, PM2 state, backups, or shell history replaced and old values revoked?
-
-Completion evidence:
-
-- provider-by-provider rotation ledger;
-- each replacement tested before old credential revocation;
-- no old value in runtime configuration, process snapshots, logs, or backups.
-
-### Deploy and validate Cloudflare enrollment and Tunnel
-
-**Question resolved by evidence:** Does the production path enforce approved-email enrollment, signed Access JWT verification, no origin bypass, no caching of API/stream responses, and safe WebSocket/SSE behavior?
-
-Completion evidence:
-
-- unauthorized and authorized tests;
-- issuer/audience/signature verification;
-- sidecar remains loopback-only;
-- origin bypass test fails;
-- stream latency and reconnect test passes.
-
-### Deploy the sidecar in read-only mode
-
-**Question resolved by evidence:** Can the hardened sidecar run under its dedicated account, expose explicit read-only adapters, use mobile-owned storage, and preserve current Hermes/WebUI behavior?
-
-Completion evidence:
-
-- systemd and filesystem review;
-- no sudo/Docker/Hermes-SQLite access;
-- unknown routes denied;
-- master key never returned or logged;
-- revocation and rate-limit tests;
-- rollback tested.
-
-### Prove the exact approval event and operation binding
-
-**Question resolved by evidence:** Does the installed Hermes version expose enough stable evidence to bind a mobile decision to the exact operation that will execute?
-
-Completion evidence:
-
-- captured safe approval event schema;
-- operation digest and expiry implemented;
-- approve-once/deny only;
-- stale, duplicate, timeout, and changed-state tests;
-- audit evidence verified.
-
-### Resolve SQLite runtime and safe update promotion
-
-**Question resolved by evidence:** Can Hermes and every database-opening companion process run a fixed SQLite runtime and survive candidate promotion/rollback without integrity loss?
-
-Completion evidence:
-
-- fixed runtime version for each process;
-- copied-database concurrency and restart tests;
-- production backup and integrity checks;
-- candidate/current/previous promotion and rollback test.
-
-### Validate the full pilot on the Samsung device
-
-**Question resolved by evidence:** Does the signed Android build remain correct through real mobile lifecycle and network behavior?
-
-Completion evidence:
-
-- installable private APK;
-- Wi-Fi/mobile switching;
-- app background, termination, and phone reboot;
-- sidecar/Hermes restart;
-- expired/revoked tokens;
-- notification permission denied and token rotation;
-- approval expiry and duplicate tap;
-- no secret leakage in logs or diagnostics.
+```text
+foundation
+  → Android read-only UI
+  → credentials/admin recovery + chat proof
+  → Cloudflare + read-only sidecar/database
+  → notifications + Samsung remote read-only pilot
+  → governed chat/run controls
+  → SQLite/update + approval proof
+  → approvals/job controls + final Samsung lifecycle
+```
 
 ---
 
 ## Not yet specified
 
-These areas remain in scope for the product's future but are deliberately beyond the current frontier:
-
-- native replacement of the embedded/reused chat renderer after the first pilot provides real usability evidence;
-- organization and invitation management for additional operators;
-- per-tenant Hermes profile/instance isolation strategy for multiple users;
-- Google Play Internal Testing and store-release governance;
-- iOS lifecycle, signing, notifications, and distribution;
+- fully native chat replacement after pilot evidence;
+- organization/invitation management;
+- per-tenant Hermes profile/instance isolation;
+- Google Play Internal Testing/production and Play Integrity enforcement;
+- iOS lifecycle, signing, and distribution;
 - richer file preview and project/worktree controls;
 - voice interaction;
-- long-term analytics and usage reporting beyond operational audit needs.
+- analytics beyond operational and security audit needs.
 
 ---
 
-## Out of scope for this MVP
+## Out of scope for the MVP
 
 - iOS release;
 - public consumer distribution;
 - arbitrary remote shell;
-- sudo/root or infrastructure administration from the phone;
-- secret management from the phone;
+- sudo/root/infrastructure administration;
+- infrastructure secret management;
 - direct database inspection or mutation;
-- permanent `always allow` command approvals;
-- replacing Hermes' scheduler, session store, run engine, or memory system;
-- creating a second Hermes runtime in the mobile repository;
-- supervising multiple production Hermes installations in Release One;
+- session-wide or permanent mobile command approval;
+- replacing Hermes scheduler/session/run/memory/execution engines;
+- a second Hermes runtime in this repository;
+- multiple production Hermes instances in Release One;
 - full multi-user organization administration;
-- autonomous merge, deployment, or infrastructure repair from the mobile app.
+- autonomous merge, deployment, or VM repair from mobile.
 
 ---
 
-## Destination completion checklist
+## Destination checklist
 
-The Wayfinder destination is complete only when all are true:
-
-- [ ] Consolidated branch and tests are visible in GitHub.
-- [ ] Android application implements the complete MVP information architecture.
-- [ ] Sidecar is deployed under a dedicated unprivileged identity.
-- [ ] Cloudflare Access enrollment and Tunnel are manually validated.
-- [ ] Hermes master credentials never leave the VM.
-- [ ] Exposed credentials are rotated and revoked.
-- [ ] No direct public mobile origin bypass exists.
-- [ ] Read-only state survives disconnect and restart through reconciliation.
-- [ ] Notifications are redacted and alert state is authoritative in-app.
-- [ ] Approval evidence is bound to the exact current operation.
-- [ ] Mobile write actions are guarded by idempotency, stale-state, and audit controls.
-- [ ] SQLite and Hermes update compatibility gates pass.
-- [ ] A signed APK passes the real Samsung lifecycle test matrix.
-- [ ] Rollback is tested for sidecar, Hermes, and mobile compatibility.
+- [ ] Consolidated implementation branch is pushed, reviewed, and reproducibly tested.
+- [ ] Android read-only vertical slice passes mobile and sidecar tests.
+- [ ] Administrator recovery and fresh-session privilege state are proven.
+- [ ] All exposed credentials are rotated/revoked and secret persistence is durable.
+- [ ] Chat reuse boundary is proven on Android.
+- [ ] Cloudflare Access/Tunnel, real IP, caching, streaming, and origin protection pass.
+- [ ] Sidecar runs loopback-only under the dedicated account with least-privilege database access.
+- [ ] No master/service/infrastructure secret reaches the APK, WebView JS, logs, or diagnostics.
+- [ ] Read-only state survives disconnect, suspension, restart, and replay gaps.
+- [ ] Notification token rotation, receipts, suppression, redaction, quiet hours, and outage behavior pass.
+- [ ] Device revocation and compromised-device policy pass.
+- [ ] Governed chat/run mutations are explicit, compatible, idempotent, and reconciled.
+- [ ] Exact approval evidence and device-bound operation signing pass.
+- [ ] SQLite and gated Hermes update/rollback gates pass.
+- [ ] Signed APK passes the complete Samsung lifecycle matrix.
 
 ---
 
 ## Primary references
 
-### Planning method
+### Planning
 
 - [Wayfinder skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/wayfinder/SKILL.md)
 - [To-spec skill](https://github.com/mattpocock/skills/blob/main/skills/engineering/to-spec/SKILL.md)
 
 ### Hermes
 
-- [Hermes API Server](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md)
-- [Hermes Programmatic Integration](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md)
-- [Hermes API implementation](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py)
+- [API Server](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/api-server.md)
+- [Programmatic Integration](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/developer-guide/programmatic-integration.md)
+- [API implementation](https://github.com/NousResearch/hermes-agent/blob/main/gateway/platforms/api_server.py)
+- [Desktop architecture](https://github.com/NousResearch/hermes-agent/blob/main/apps/desktop/README.md)
 
 ### Expo and React Native
 
 - [Expo Router authentication](https://docs.expo.dev/router/advanced/authentication/)
-- [Expo SecureStore](https://docs.expo.dev/develop/user-interface/store-data/)
-- [Expo LocalAuthentication](https://docs.expo.dev/versions/v54.0.0/sdk/local-authentication/)
-- [Expo Notifications for SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/)
+- [Expo authentication](https://docs.expo.dev/guides/authentication/)
+- [Expo SecureStore SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/securestore/)
+- [Expo LocalAuthentication SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/local-authentication/)
+- [Expo Notifications SDK 56](https://docs.expo.dev/versions/v56.0.0/sdk/notifications/)
 - [Expo Internal Distribution](https://docs.expo.dev/build/internal-distribution/)
+- [React Native WebSocket](https://reactnative.dev/docs/global-WebSocket)
 - [React Native AppState](https://reactnative.dev/docs/appstate)
 
-### Edge, identity, and data security
+### Cloudflare, data, runtime, and Android security
 
 - [Cloudflare One-time PIN](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/)
 - [Cloudflare Access JWT validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
-- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Fastify ecosystem](https://fastify.dev/docs/v5.7.x/Guides/Ecosystem/)
-- [SQLite Write-Ahead Logging and WAL-reset defect](https://sqlite.org/wal.html)
+- [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+- [Cloudflare original visitor IP](https://developers.cloudflare.com/support/troubleshooting/restoring-visitor-ips/restoring-original-visitor-ips/)
+- [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Fastify ecosystem](https://fastify.dev/docs/latest/Guides/Ecosystem/)
+- [SQLite WAL-reset bug](https://sqlite.org/wal.html#the_wal_reset_bug)
+- [Android Play Integrity verdicts](https://developer.android.com/google/play/integrity/verdicts)
+- [Docker post-install security warning](https://docs.docker.com/engine/install/linux-postinstall/)
