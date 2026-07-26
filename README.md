@@ -1,73 +1,75 @@
-# Minimal Template
+# Hermes Mobile
 
-This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
+Mobile command center for the Hermes Agent — an Expo React Native Android application with a hardened Node.js sidecar gateway.
 
-It was initialized using the following command, then the `Minimal (Nativewind)` template was selected when prompted:
+## Repository structure
 
-```bash
-npx @react-native-reusables/cli@latest init
+```
+hermes-mobile/
+├── app/                     # Expo Router pages (auth, today, tasks, etc.)
+├── components/              # Shared React Native components (shadcn/RN Reusables)
+├── lib/                     # Core libraries (utils, theme)
+├── assets/                  # Static assets
+├── services/
+│   └── hermes-sidecar/      # Hardened Fastify/TypeScript sidecar gateway
+├── docs/                    # Architecture and development documentation
+├── package.json             # Root workspace — Expo commands + sidecar scripts
+└── app.json                 # Expo configuration
 ```
 
-## Getting Started
+## Quick start
 
-To run the development server:
-
+### Mobile app (Expo)
 ```bash
-    npm run dev
-    # or
-    yarn dev
-    # or
-    pnpm dev
-    # or
-    bun dev
+npm run dev           # Start Expo dev server
+npm run android       # Start for Android emulator
 ```
 
-This will start the Expo Dev Server. Open the app in:
-
-- **iOS**: press `i` to launch in the iOS simulator _(Mac only)_
-- **Android**: press `a` to launch in the Android emulator
-- **Web**: press `w` to run in a browser
-
-You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
-
-## Adding components
-
-You can add more reusable components using the CLI:
-
+### Sidecar (Node.js gateway)
 ```bash
-npx react-native-reusables/cli@latest add [...components]
+npm run sidecar:install    # Install sidecar dependencies
+npm run sidecar:dev        # Start in mock mode on 127.0.0.1:18790
+npm run sidecar:test       # Run all 96 sidecar tests
+npm run sidecar:typecheck  # TypeScript check
 ```
 
-> e.g. `npx react-native-reusables/cli@latest add input textarea`
+### Sidecar mock mode
+The sidecar starts in safe mock mode by default — no production Hermes connection needed. It uses a built-in mock Hermes Gateway server on port 18642.
 
-If you don't specify any component names, you'll be prompted to select which components to add interactively. Use the `--all` flag to install all available components at once.
+## Safety defaults
 
-## Project Features
+```env
+HERMES_INTEGRATION_MODE=mock     # No production Hermes connection
+MOBILE_WRITE_ACTIONS_ENABLED=false  # Write routes disabled
+PUSH_DELIVERY_ENABLED=false      # No push notifications
+DATABASE_MODE=test               # In-memory state only
+```
 
-- ⚛️ Built with [Expo Router](https://expo.dev/router)
-- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Nativewind](https://www.nativewind.dev/)
-- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
-- 🚀 New Architecture enabled
-- 🔥 Edge to Edge enabled
-- 📱 Runs on iOS, Android, and Web
+## Services
 
-## Learn More
+### Hermes Sidecar (`services/hermes-sidecar/`)
+Standalone Node.js/TypeScript/Fastify gateway that sits between the Hermes Agent and mobile devices. Provides:
+- 13 read-only Hermes API endpoints
+- HMAC-SHA256 JWT auth (10-min access tokens, 30-day refresh)
+- 5-layer rate limiting (IP, principal, device, endpoint, token refresh)
+- WebSocket event relay with heartbeat, reconnect, dedup
+- 13-table Postgres schema (migration files only — not applied)
+- 96 passing tests across 6 test suites
 
-To dive deeper into the technologies used:
+See `services/hermes-sidecar/README.md` for full details.
 
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Nativewind Docs](https://www.nativewind.dev/)
-- [React Native Reusables](https://reactnativereusables.com)
+## Development
 
-## Deploy with EAS
+- **Mobile**: Edit `app/`, `components/`, `lib/` for React Native screens
+- **Sidecar**: Edit `services/hermes-sidecar/src/` for gateway code
+- **Tests**: `npm run sidecar:test` (96 tests), mobile tests TBD
+- **OpenAPI**: `npm run sidecar:openapi` to regenerate
 
-The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
+## Restrictions
 
-- [EAS Build](https://docs.expo.dev/build/introduction/)
-- [EAS Updates](https://docs.expo.dev/eas-update/introduction/)
-- [EAS Submit](https://docs.expo.dev/submit/introduction/)
-
----
-
-If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
+- Sidecar binds only to `127.0.0.1` in dev mode
+- Write actions are disabled by default
+- Push delivery is disabled by default
+- No production Hermes API keys in this repository
+- No Cloudflare, nginx, or systemd config committed
+- No database migrations applied automatically
