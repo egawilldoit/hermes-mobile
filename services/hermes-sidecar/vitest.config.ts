@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@hermes/contracts': path.resolve(__dirname, '../../packages/contracts/src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',

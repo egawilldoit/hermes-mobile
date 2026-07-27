@@ -1,10 +1,15 @@
 // ── Mobile-specific routes (device management, alerts) ──
+// Uses canonical zod schemas from @hermes/contracts where applicable.
 
 import type { FastifyInstance } from 'fastify';
 import type { AppConfig } from '../lib/config.js';
 import type { DeviceRegistrationRequest } from '../types/hermes.js';
 import { TokenStore, type DeviceInfo } from '../lib/auth.js';
 import { RateLimiter, RATE_LIMIT_PRESETS } from '../lib/rate-limiter.js';
+import {
+  DeviceRegistrationResponseSchema,
+  AlertsResponseSchema,
+} from '@hermes/contracts';
 
 export function registerMobileRoutes(
   app: FastifyInstance,
@@ -19,8 +24,8 @@ export function registerMobileRoutes(
       reply.status(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
       return;
     }
-    // Return empty alerts list in mock mode
-    return { alerts: [], device_id: auth.deviceId };
+    const result = { alerts: [], device_id: auth.deviceId };
+    return AlertsResponseSchema.parse(result);
   });
 
   // POST /v1/mobile/devices/register — register a new device
@@ -65,13 +70,14 @@ export function registerMobileRoutes(
         body.push_token
       );
 
-      return {
+      const result = {
         device_id: tokens.device_id,
         access_token: tokens.accessToken,
         refresh_token: tokens.refreshToken,
         expires_in: tokens.expiresIn,
-        token_type: 'Bearer',
+        token_type: 'Bearer' as const,
       };
+      return DeviceRegistrationResponseSchema.parse(result);
     }
 
     // Real validation would happen here (Cloudflare Access JWT → enrollment code)
