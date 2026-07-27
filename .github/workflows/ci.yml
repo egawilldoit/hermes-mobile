@@ -32,8 +32,11 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: packages/contracts/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec tsc -p packages/contracts/tsconfig.json --noEmit
+        working-directory: packages/contracts
+      - run: pnpm exec tsc --noEmit
+        working-directory: packages/contracts
 
   sidecar:
     name: Sidecar typecheck + test
