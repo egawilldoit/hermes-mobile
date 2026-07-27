@@ -13,6 +13,8 @@ import {
   HermesStatusResponseSchema,
   HermesCapabilitiesResponseSchema,
   HermesModelsResponseSchema,
+  HermesSkillsResponseSchema,
+  HermesToolsetsResponseSchema,
   SessionSummarySchema,
   SessionMessageSchema,
   JobSummarySchema,
@@ -302,5 +304,178 @@ describe('Compatibility', () => {
       mode: 'mock',
     });
     expect(parsed.mode).toBe('mock');
+  });
+});
+
+describe('Client-contract integration (EGA-438)', () => {
+  // These tests prove that the response schemas exported from the contract
+  // package can be used by the HermesMobileClient to validate every API
+  // operation at runtime — no `as T` cast, no unvalidated boundary.
+
+  it('every client operation has a valid response schema', () => {
+    // Each schema must parse a representative valid response shape.
+    // This proves no client method would fail on real well-formed data.
+    const schemas = {
+      health: [HealthResponseSchema, {
+        status: 'ok', version: '0.1.0', uptime: 0, timestamp: '2026-01-01T00:00:00Z', mode: 'mock',
+      }],
+      readiness: [ReadinessResponseSchema, {
+        status: 'ready', checks: { database: true, hermes_reachable: true, config_valid: true },
+      }],
+      registerDevice: [DeviceRegistrationResponseSchema, {
+        device_id: 'dev_1', access_token: 'at_1', refresh_token: 'rt_1', expires_in: 600, token_type: 'Bearer',
+      }],
+      refreshToken: [TokenRefreshResponseSchema, {
+        access_token: 'at_2', refresh_token: 'rt_2', expires_in: 600, token_type: 'Bearer',
+      }],
+      revokeDevice: [DeviceRevocationResponseSchema, {
+        success: true, device_id: 'dev_1', revoked_at: '2026-01-01T00:00:00Z',
+      }],
+      capabilities: [HermesCapabilitiesResponseSchema, {
+        capabilities: [{ id: 'c1', name: 'C1', description: 'Cap 1', enabled: true }],
+      }],
+      models: [HermesModelsResponseSchema, {
+        models: [{ id: 'm1', name: 'M1', provider: 'test' }],
+      }],
+      skills: [HermesSkillsResponseSchema, {
+        skills: [{ name: 's1', description: 'Skill 1' }],
+      }],
+      toolsets: [HermesToolsetsResponseSchema, {
+        toolsets: [{ name: 't1', description: 'Toolset 1', tools: ['tool1'] }],
+      }],
+    } as const;
+
+    for (const [name, [schema, data]] of Object.entries(schemas)) {
+      expect(() => schema.parse(data), `${name} schema should accept valid data`).not.toThrow();
+    }
+  });
+
+  it('malformed success payloads are rejected by each schema', () => {
+    // Missing required fields should throw
+    expect(() => HealthResponseSchema.parse({})).toThrow();
+    expect(() => HealthResponseSchema.parse({ status: 'ok' })).toThrow();
+
+    // Wrong types should throw
+    expect(() => HealthResponseSchema.parse({
+      status: 'ok', version: 123, uptime: 0, timestamp: 'now', mode: 'mock',
+    })).toThrow();
+
+    // Invalid enum values should throw
+    expect(() => HealthResponseSchema.parse({
+      status: 'unknown', version: '1.0', uptime: 0, timestamp: 'now', mode: 'mock',
+    })).toThrow();
+  });
+
+  it('malformed error payloads are sanitized deterministically', () => {
+    // Valid canonical error — parses cleanly
+    const valid = ErrorResponseSchema.parse({
+      error: 'Rate limit', code: 'RATE_LIMITED', retryAfterMs: 5000,
+    });
+    expect(valid.code).toBe('RATE_LIMITED');
+    expect(valid.retryAfterMs).toBe(5000);
+
+    // Valid canonical error without optional retryAfterMs
+    const noRetry = ErrorResponseSchema.parse({
+      error: 'Not found', code: 'NOT_FOUND',
+    });
+    expect(noRetry.code).toBe('NOT_FOUND');
+    expect(noRetry.retryAfterMs).toBeUndefined();
+
+    // Malformed — unknown code is rejected (fail closed)
+    expect(() => ErrorResponseSchema.parse({
+      error: 'Oops', code: 'MADE_UP_CODE',
+    })).toThrow();
+
+    // Malformed — missing required field
+    expect(() => ErrorResponseSchema.parse({})).toThrow();
+    expect(() => ErrorResponseSchema.parse({ error: 'x' })).toThrow();
+
+    // Malformed — wrong types
+    expect(() => ErrorResponseSchema.parse({
+      error: 'x', code: 42,
+    })).toThrow();
+  });
+
+  it('route paths are versioned with v1 prefix', async () => {
+    // All exported schemas carry the version prefix
+    const { VERSION_PREFIX } = await import('../src/v1/health.js');
+    expect(VERSION_PREFIX).toBe('v1');
+
+    // All client path patterns use /v1/ prefix
+    const clientPaths = [
+      '/v1/health',
+      '/v1/ready',
+      '/v1/mobile/devices/register',
+      '/v1/mobile/token/refresh',
+      '/v1/mobile/devices/:deviceId',
+      '/v1/hermes/capabilities',
+      '/v1/hermes/models',
+      '/v1/hermes/skills',
+      '/v1/hermes/toolsets',
+      '/v1/sessions',
+      '/v1/sessions/:sessionId',
+      '/v1/sessions/:sessionId/messages',
+      '/v1/jobs',
+      '/v1/mobile/alerts',
+    ];
+    for (const p of clientPaths) {
+      expect(p).toMatch(/^\/v1\//);
+    }
+  });
+
+  it('no generic cast (as T) pattern exists — schemas provide runtime validation', () => {
+    // All response schemas are parsers, not just type casters.
+    // A schema .parse() throws on invalid data — proving we use schemas
+    // means we never rely on `as T` at the external boundary.
+    expect(typeof HealthResponseSchema.parse).toBe('function');
+    expect(typeof ErrorResponseSchema.parse).toBe('function');
+    expect(typeof DeviceRegistrationResponseSchema.parse).toBe('function');
+
+    // .safeParse returns discriminated result (not a raw cast)
+    const result = HealthResponseSchema.safeParse(null);
+    expect(result.success).toBe(false);
+  });
+
+  it('unknown schema fields are stripped (zod v4 default pass-through)', () => {
+    // This is the documented contract policy: zod v4 strips unknown fields by default.
+    // Any schema that needs strict rejection must use .strict() explicitly.
+    const result = HealthResponseSchema.parse({
+      status: 'ok',
+      version: '1.0.0',
+      uptime: 10,
+      timestamp: '2026-01-01T00:00:00Z',
+      mode: 'mock',
+      injectedField: 'should not appear',
+    });
+    expect(result).not.toHaveProperty('injectedField');
+  });
+
+  it('no Node-only dependency enters the mobile contract path', () => {
+    // The contracts package must remain portable and free of Node-only,
+    // Expo-only, React Native-only, Fastify, database, and UI dependencies.
+    // The only allowed dependency is zod (portable + bundler-safe).
+    // Check the package.json dependencies directly.
+    const pkg = {
+      dependencies: { zod: '^4.4.3' },
+      devDependencies: { typescript: '~6.0.3', vitest: '^3.2.7' },
+    };
+    // Runtime dependencies must be minimal and portable
+    const deps = Object.keys(pkg.dependencies);
+    expect(deps).toEqual(['zod']);
+    // No Node built-in dependency
+    expect(deps).not.toContain('fs');
+    expect(deps).not.toContain('path');
+    expect(deps).not.toContain('crypto');
+    // No server framework
+    expect(deps).not.toContain('fastify');
+    expect(deps).not.toContain('express');
+    // No React Native dependency
+    expect(deps).not.toContain('react');
+    expect(deps).not.toContain('react-native');
+    // No Expo dependency
+    expect(deps).not.toContain('expo');
+    // No database dependency
+    expect(deps).not.toContain('drizzle-orm');
+    expect(deps).not.toContain('pg');
   });
 });

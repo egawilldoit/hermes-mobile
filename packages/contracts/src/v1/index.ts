@@ -2,6 +2,9 @@
 // Single authoritative source for v1 mobile-sidecar wire knowledge.
 // All schemas provide runtime validation via zod.
 
+export { z } from 'zod';
+export type { ZodType } from 'zod';
+
 export { VERSION_PREFIX } from './health.js';
 
 // ── Health & Readiness ──

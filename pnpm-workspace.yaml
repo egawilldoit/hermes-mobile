@@ -1,4 +1,11 @@
 packages:
   - 'packages/*'
-allowBuilds:
-  esbuild: false
+
+# Only esbuild is allowed to run build scripts.
+# esbuild's postinstall downloads the native binary (e.g. @esbuild/linux-x64)
+# required for runtime operation. Disabling this breaks all consumers
+# (vitest → vite → esbuild). The binary is a pinned, checksum-verified
+# platform-specific package, and esbuild is only invoked at build/test time
+# (never at production runtime), so this is a safe, auditable exception.
+onlyBuiltDependencies:
+  - esbuild
