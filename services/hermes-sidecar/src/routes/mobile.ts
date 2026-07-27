@@ -1,14 +1,15 @@
 // ── Mobile-specific routes (device management, alerts) ──
-// Uses canonical zod schemas from @hermes/contracts where applicable.
+// Uses canonical zod schemas from @hermes/contracts for runtime validation.
 
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { AppConfig } from '../lib/config.js';
-import type { DeviceRegistrationRequest } from '../types/hermes.js';
-import { TokenStore, type DeviceInfo } from '../lib/auth.js';
+import { TokenStore } from '../lib/auth.js';
 import { RateLimiter, RATE_LIMIT_PRESETS } from '../lib/rate-limiter.js';
 import {
+  DeviceRegistrationRequestSchema,
   DeviceRegistrationResponseSchema,
   AlertsResponseSchema,
+  ErrorResponseSchema,
 } from '@hermes/contracts';
 
 export function registerMobileRoutes(
@@ -18,46 +19,42 @@ export function registerMobileRoutes(
   rateLimiter: RateLimiter
 ): void {
   // GET /v1/mobile/alerts — list alerts for the authenticated device
-  app.get('/v1/mobile/alerts', async (request, reply) => {
+  app.get('/v1/mobile/alerts', async (request: FastifyRequest, reply: FastifyReply) => {
     const auth = request.authContext;
     if (!auth.authenticated) {
-      reply.status(401).send({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
-      return;
+      reply.status(401);
+      return ErrorResponseSchema.parse({ error: 'Authentication required', code: 'AUTH_REQUIRED' });
     }
     const result = { alerts: [], device_id: auth.deviceId };
     return AlertsResponseSchema.parse(result);
   });
 
   // POST /v1/mobile/devices/register — register a new device
-  app.post<{ Body: DeviceRegistrationRequest }>('/v1/mobile/devices/register', {
-    schema: {
-      body: {
-        type: 'object',
-        required: ['enrollment_code', 'device_name', 'platform'],
-        properties: {
-          enrollment_code: { type: 'string' },
-          device_name: { type: 'string' },
-          platform: { type: 'string', enum: ['android', 'ios'] },
-          push_token: { type: 'string' },
-        },
-      },
-    },
-  }, async (req, reply) => {
+  app.post('/v1/mobile/devices/register', async (req: FastifyRequest, reply: FastifyReply) => {
     // Rate limit device registration per IP
     const ipCheck = rateLimiter.checkWindow(
       'device_registration', req.ip,
       RATE_LIMIT_PRESETS.deviceRegistration.maxRequests
     );
     if (!ipCheck.allowed) {
-      reply.status(429).send({
+      reply.status(429);
+      return ErrorResponseSchema.parse({
         error: 'Too many registration attempts',
         code: 'RATE_LIMITED',
         retryAfterMs: ipCheck.retryAfterMs,
       });
-      return;
     }
 
-    const body = req.body;
+    // Validate request body through canonical Zod schema
+    const parseResult = DeviceRegistrationRequestSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      reply.status(400);
+      return ErrorResponseSchema.parse({
+        error: 'Invalid request body',
+        code: 'REQUEST_ERROR',
+      });
+    }
+    const body = parseResult.data;
 
     // In mock mode, accept any enrollment code
     if (config.hermesIntegrationMode === 'mock') {

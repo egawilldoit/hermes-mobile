@@ -14,23 +14,8 @@ export function registerHealthRoutes(
   config: AppConfig,
   hermesClient: HermesClient
 ): void {
-  // GET /health — liveness probe
-  app.get('/health', {
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            version: { type: 'string' },
-            uptime: { type: 'number' },
-            timestamp: { type: 'string' },
-            mode: { type: 'string' },
-          },
-        },
-      },
-    },
-  }, async () => {
+  // GET /v1/health — liveness probe
+  app.get('/v1/health', async () => {
     const reply: HealthResponse = {
       status: 'ok',
       version: '0.1.0',
@@ -42,27 +27,8 @@ export function registerHealthRoutes(
     return HealthResponseSchema.parse(reply);
   });
 
-  // GET /ready — readiness probe (checks dependencies)
-  app.get('/ready', {
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            checks: {
-              type: 'object',
-              properties: {
-                database: { type: 'boolean' },
-                hermes_reachable: { type: 'boolean' },
-                config_valid: { type: 'boolean' },
-              },
-            },
-          },
-        },
-      },
-    },
-  }, async () => {
+  // GET /v1/ready — readiness probe (checks dependencies)
+  app.get('/v1/ready', async () => {
     let hermesReachable = false;
     try {
       const health = await hermesClient.getHealth();

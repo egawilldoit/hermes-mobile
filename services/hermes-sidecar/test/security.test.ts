@@ -54,8 +54,8 @@ describe('No shell or command execution endpoints', () => {
 
 describe('Hermes API key never appears in responses', () => {
   const endpoints = [
-    { method: 'GET', url: '/health', auth: false },
-    { method: 'GET', url: '/ready', auth: false },
+    { method: 'GET', url: '/v1/health', auth: false },
+    { method: 'GET', url: '/v1/ready', auth: false },
     { method: 'GET', url: '/v1/hermes/capabilities', auth: true },
     { method: 'GET', url: '/v1/hermes/models', auth: true },
     { method: 'GET', url: '/v1/hermes/status', auth: true },
@@ -157,7 +157,7 @@ describe('Request timeouts are bounded', () => {
     // by checking the error handler behavior
     const res = await ctx.app.inject({
       method: 'GET',
-      url: '/health',
+      url: '/v1/health',
     });
     expect(res.statusCode).toBe(200); // Fast test passes fine
   });

@@ -1,7 +1,6 @@
 // ── V1 Contract: Mobile Alert schemas ──
 
 import { z } from 'zod';
-import { VERSION_PREFIX } from './health.js';
 
 // ── Severity ──
 
@@ -18,7 +17,7 @@ export const MobileAlertSchema = z.object({
   body: z.string().optional(),
   read: z.boolean(),
   created_at: z.string(),
-}).describe(`${VERSION_PREFIX}_mobile_alert`);
+});
 
 export type MobileAlert = z.infer<typeof MobileAlertSchema>;
 
@@ -27,6 +26,6 @@ export type MobileAlert = z.infer<typeof MobileAlertSchema>;
 export const AlertsResponseSchema = z.object({
   alerts: z.array(MobileAlertSchema),
   device_id: z.string(),
-}).describe(`${VERSION_PREFIX}_alerts_response`);
+});
 
 export type AlertsResponse = z.infer<typeof AlertsResponseSchema>;

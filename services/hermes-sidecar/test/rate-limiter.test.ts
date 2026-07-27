@@ -22,7 +22,7 @@ describe('Rate limiting — IP-based', () => {
   it('allows requests within limits', async () => {
     // Make a few requests that should be fine
     for (let i = 0; i < 5; i++) {
-      const res = await ctx.app.inject({ method: 'GET', url: '/health' });
+      const res = await ctx.app.inject({ method: 'GET', url: '/v1/health' });
       expect(res.statusCode).toBe(200);
     }
   });

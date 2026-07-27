@@ -2,7 +2,6 @@
 // Stable machine-readable error codes and response body.
 
 import { z } from 'zod';
-import { VERSION_PREFIX } from './health.js';
 
 // ── Error Codes ──
 
@@ -27,6 +26,7 @@ export type ErrorCode = z.infer<typeof ErrorCodeEnum>;
 export const ErrorResponseSchema = z.object({
   error: z.string(),
   code: ErrorCodeEnum,
-}).describe(`${VERSION_PREFIX}_error_response`);
+  retryAfterMs: z.number().int().nonnegative().optional(),
+}).strict();
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

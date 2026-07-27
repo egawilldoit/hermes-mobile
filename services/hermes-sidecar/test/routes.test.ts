@@ -18,9 +18,9 @@ afterAll(async () => {
 
 // ── Public Routes (no auth) ──
 
-describe('GET /health (public)', () => {
+describe('GET /v1/health (public)', () => {
   it('returns 200 with status ok (no auth)', async () => {
-    const res = await ctx.app.inject({ method: 'GET', url: '/health' });
+    const res = await ctx.app.inject({ method: 'GET', url: '/v1/health' });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.payload);
     expect(body.status).toBe('ok');
@@ -29,16 +29,16 @@ describe('GET /health (public)', () => {
   it('returns 200 with auth header (also works)', async () => {
     const res = await ctx.app.inject({
       method: 'GET',
-      url: '/health',
+      url: '/v1/health',
       headers: { authorization: `Bearer ${accessToken}` },
     });
     expect(res.statusCode).toBe(200);
   });
 });
 
-describe('GET /ready (public)', () => {
+describe('GET /v1/ready (public)', () => {
   it('returns ready when Hermes is reachable', async () => {
-    const res = await ctx.app.inject({ method: 'GET', url: '/ready' });
+    const res = await ctx.app.inject({ method: 'GET', url: '/v1/ready' });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.payload);
     expect(body.status).toBe('ready');

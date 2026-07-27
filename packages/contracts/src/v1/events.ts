@@ -2,14 +2,13 @@
 // Event envelope, heartbeat, and event types for the mobile event stream.
 
 import { z } from 'zod';
-import { VERSION_PREFIX } from './health.js';
 
 // ── Heartbeat Event ──
 
 export const HeartbeatEventSchema = z.object({
   type: z.literal('heartbeat'),
   timestamp: z.string(),
-}).describe(`${VERSION_PREFIX}_heartbeat_event`);
+});
 
 export type HeartbeatEvent = z.infer<typeof HeartbeatEventSchema>;
 
@@ -21,15 +20,19 @@ export const MobileEventSchema = z.object({
   type: z.string(),
   data: z.record(z.string(), z.unknown()),
   timestamp: z.string(),
-}).describe(`${VERSION_PREFIX}_mobile_event`);
+});
 
 export type MobileEvent = z.infer<typeof MobileEventSchema>;
 
-// ── Event Union (for discriminated parsing) ──
+// ── Event Union (for parsing) ──
+// NOTE: z.union instead of z.discriminatedUnion because MobileEventSchema.type
+// is z.string() (a generic envelope) which overlaps with HeartbeatEventSchema's
+// z.literal('heartbeat') — discriminated unions require literal discriminators
+// on every branch.
 
-export const MobileEventUnionSchema = z.discriminatedUnion('type', [
+export const MobileEventUnionSchema = z.union([
   HeartbeatEventSchema,
   MobileEventSchema,
-]).describe(`${VERSION_PREFIX}_mobile_event_union`);
+]);
 
 export type MobileEventUnion = z.infer<typeof MobileEventUnionSchema>;

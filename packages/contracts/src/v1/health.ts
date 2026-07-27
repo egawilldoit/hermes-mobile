@@ -19,7 +19,7 @@ export const HealthResponseSchema = z.object({
   uptime: z.number(),
   timestamp: z.string(),
   mode: IntegrationModeEnum,
-}).describe(`${VERSION_PREFIX}_health_response`);
+});
 
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
@@ -37,6 +37,6 @@ export const ReadinessChecksSchema = z.object({
 export const ReadinessResponseSchema = z.object({
   status: ReadinessStatusEnum,
   checks: ReadinessChecksSchema,
-}).describe(`${VERSION_PREFIX}_readiness_response`);
+});
 
 export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>;

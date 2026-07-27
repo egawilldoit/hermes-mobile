@@ -1,7 +1,6 @@
 // ── V1 Contract: Hermes status/capabilities/models/skills/toolsets schemas ──
 
 import { z } from 'zod';
-import { VERSION_PREFIX } from './health.js';
 
 // ── Hermes Status ──
 
@@ -11,7 +10,7 @@ export const HermesStatusResponseSchema = z.object({
   status: StatusResultEnum,
   platform: z.string(),
   version: z.string(),
-}).describe(`${VERSION_PREFIX}_hermes_status_response`);
+});
 
 export type HermesStatusResponse = z.infer<typeof HermesStatusResponseSchema>;
 
@@ -27,7 +26,7 @@ export type HermesCapability = z.infer<typeof HermesCapabilitySchema>;
 
 export const HermesCapabilitiesResponseSchema = z.object({
   capabilities: z.array(HermesCapabilitySchema),
-}).describe(`${VERSION_PREFIX}_hermes_capabilities_response`);
+});
 
 export type HermesCapabilitiesResponse = z.infer<typeof HermesCapabilitiesResponseSchema>;
 
@@ -43,7 +42,7 @@ export type HermesModel = z.infer<typeof HermesModelSchema>;
 
 export const HermesModelsResponseSchema = z.object({
   models: z.array(HermesModelSchema),
-}).describe(`${VERSION_PREFIX}_hermes_models_response`);
+});
 
 export type HermesModelsResponse = z.infer<typeof HermesModelsResponseSchema>;
 
@@ -58,7 +57,7 @@ export type HermesSkill = z.infer<typeof HermesSkillSchema>;
 
 export const HermesSkillsResponseSchema = z.object({
   skills: z.array(HermesSkillSchema),
-}).describe(`${VERSION_PREFIX}_hermes_skills_response`);
+});
 
 export type HermesSkillsResponse = z.infer<typeof HermesSkillsResponseSchema>;
 
@@ -73,6 +72,6 @@ export type HermesToolset = z.infer<typeof HermesToolsetSchema>;
 
 export const HermesToolsetsResponseSchema = z.object({
   toolsets: z.array(HermesToolsetSchema),
-}).describe(`${VERSION_PREFIX}_hermes_toolsets_response`);
+});
 
 export type HermesToolsetsResponse = z.infer<typeof HermesToolsetsResponseSchema>;

@@ -3,6 +3,14 @@
 // In dev, uses http://127.0.0.1:18790
 // On physical Android, 127.0.0.1 points to the phone, not the VM — use 10.0.2.2 for emulator.
 
+import {
+  HealthResponseSchema,
+  ReadinessResponseSchema,
+  DeviceRegistrationResponseSchema,
+  TokenRefreshResponseSchema,
+  DeviceRevocationResponseSchema,
+  AlertsResponseSchema,
+} from '@hermes/contracts';
 import type {
   HealthResponse,
   ReadinessResponse,
@@ -63,11 +71,13 @@ export class HermesMobileClient {
   // ── Public endpoints ──
 
   async getHealth(): Promise<HealthResponse> {
-    return this.request('/health', { noAuth: true });
+    const response = await this.request('/v1/health', { noAuth: true });
+    return HealthResponseSchema.parse(response);
   }
 
   async getReadiness(): Promise<ReadinessResponse> {
-    return this.request('/ready', { noAuth: true });
+    const response = await this.request('/v1/ready', { noAuth: true });
+    return ReadinessResponseSchema.parse(response);
   }
 
   // ── Auth ──

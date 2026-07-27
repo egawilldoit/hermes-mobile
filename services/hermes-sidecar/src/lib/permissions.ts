@@ -17,8 +17,8 @@ export interface RoutePermission {
 // Routes not listed here are denied by default (see isRoutePermitted).
 const ROUTE_PERMISSIONS: RoutePermission[] = [
   // Public (no auth)
-  { method: 'GET', path: '/health', requiredScope: [], requiresAuth: false, description: 'Liveness probe' },
-  { method: 'GET', path: '/ready', requiredScope: [], requiresAuth: false, description: 'Readiness probe' },
+  { method: 'GET', path: '/v1/health', requiredScope: [], requiresAuth: false, description: 'Liveness probe' },
+  { method: 'GET', path: '/v1/ready', requiredScope: [], requiresAuth: false, description: 'Readiness probe' },
 
   // Hermes status (read-only)
   { method: 'GET', path: '/v1/hermes/status', requiredScope: ['read', 'mobile'], requiresAuth: true, description: 'Hermes gateway health' },

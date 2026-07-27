@@ -276,16 +276,17 @@ describe('Error schema', () => {
 });
 
 describe('Compatibility', () => {
-  it('accepts extra fields via passthrough', () => {
+  it('strips unknown fields by default (zod v4 default behavior)', () => {
     const result = HealthResponseSchema.parse({
       status: 'ok',
       version: '0.1.0',
       uptime: 123,
       timestamp: '2026-07-27T12:00:00Z',
       mode: 'mock',
-      extraField: 'should be ignored with passthrough',
+      extraField: 'should be stripped by default',
     });
     expect(result.status).toBe('ok');
+    expect((result as any).extraField).toBeUndefined();
   });
 
   it('produces correct inferred types', () => {
