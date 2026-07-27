@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HERMES_INTEGRATION_MODE: mock
+  MOBILE_WRITE_ACTIONS_ENABLED: "false"
+  PUSH_DELIVERY_ENABLED: "false"
+  DATABASE_MODE: test
+
+jobs:
+  contracts-typecheck:
+    name: Contracts typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -p packages/contracts/tsconfig.json --noEmit
+
+  sidecar:
+    name: Sidecar typecheck + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/hermes-sidecar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/hermes-sidecar/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  secret-scanning:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-env-files:
+    name: Check no tracked .env files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no .env files are tracked
+        run: |
+          tracked_env=$(git ls-files '*.env' 2>/dev/null)
+          if [ -n "$tracked_env" ]; then
+            echo "ERROR: The following .env files are tracked in git:"
+            echo "$tracked_env"
+            echo "These must be removed with git rm --cached and added to .gitignore."
+            exit 1
+          fi
+          echo "OK: No .env files are tracked in git."
+
+  check-safe-defaults:
+    name: Check safe defaults
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify safe development defaults
+        run: |
+          errors=0
+          check_var() {
+            local var="$1"
+            local expected="$2"
+            if ! grep -q "^${var}=${expected}$" README.md; then
+              echo "ERROR: README.md missing safe default ${var}=${expected}"
+              errors=$((errors+1))
+            else
+              echo "OK: ${var}=${expected} found in README.md"
+            fi
+          }
+          check_var "HERMES_INTEGRATION_MODE" "mock"
+          check_var "MOBILE_WRITE_ACTIONS_ENABLED" "false"
+          check_var "PUSH_DELIVERY_ENABLED" "false"
+          check_var "DATABASE_MODE" "test"
+          if [ "$errors" -gt 0 ]; then
+            echo "FAILED: $errors safe default(s) missing from README.md"
+            exit 1
+          fi
+          echo "All safe defaults verified."
+
+  check-gitignore:
+    name: Check .gitignore coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify .gitignore covers generated/cache/coverage
+        run: |
+          errors=0
+          for pattern in "node_modules/" ".env" ".expo/" "dist/" "coverage/" "*.tsbuildinfo" ".env*.local"; do
+            if grep -qx "$pattern" .gitignore; then
+              echo "OK: .gitignore covers '$pattern'"
+            else
+              echo "ERROR: .gitignore missing pattern '$pattern'"
+              errors=$((errors+1))
+            fi
+          done
+          if [ "$errors" -gt 0 ]; then
+            echo "FAILED: $errors .gitignore pattern(s) missing"
+            exit 1
+          fi
+          echo "All required .gitignore patterns present."
