@@ -1,7 +1,7 @@
 // ── V1 Contract: Error response schemas ──
 // Stable machine-readable error codes and response body.
 
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { VERSION_PREFIX } from './health.js';
 
 // ── Error Codes ──

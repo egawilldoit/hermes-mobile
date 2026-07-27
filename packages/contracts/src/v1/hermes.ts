@@ -1,6 +1,6 @@
 // ── V1 Contract: Hermes status/capabilities/models/skills/toolsets schemas ──
 
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import { VERSION_PREFIX } from './health.js';
 
 // ── Hermes Status ──

@@ -1,7 +1,7 @@
 // ── V1 Contract: Health & Readiness schemas ──
 // All schemas carry v1 metadata for version-aware validation.
 
-import { z } from 'zod/v4';
+import { z } from 'zod';
 
 export const VERSION_PREFIX = 'v1';
 
