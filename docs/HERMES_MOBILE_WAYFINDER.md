@@ -49,7 +49,7 @@ Visible in the GitHub repository or PR.
 
 ### Operator-reported local implementation
 
-Reported from `/home/ubuntu/hermes-mobile` on the VM but not yet visible on GitHub. These claims remain provisional until the branch is pushed and tests are reproduced.
+Reported from `/home/ubuntu/hermes-mobile` on the VM and merged to GitHub `main` via PR #14. 96/96 tests verified on the consolidated branch.
 
 ### VM-audit evidence
 
@@ -69,17 +69,18 @@ Behavior taken from official Hermes, Expo, React Native, Cloudflare, Supabase, F
 
 ### GitHub-visible baseline
 
-At the time of this review, GitHub `main` contains the original React Native Reusables template:
+Following the consolidation (PR #14), GitHub `main` now contains the consolidated repository with sidecar integration:
 
 - Expo `~56.0.13`;
 - React Native `0.85.3`;
 - React `19.2.3`;
 - Expo Router `~56.2.12`;
 - NativeWind and React Native Reusables;
+- sidecar service and shared contracts under `services/hermes-sidecar/` and `packages/contracts/`;
 - portrait orientation;
 - typed Expo Router routes;
 - no Android package identifier yet;
-- no production authentication, push, Cloudflare, sidecar, or Hermes integration visible on `main`.
+- no production authentication, push, or Cloudflare configured.
 
 Sources:
 

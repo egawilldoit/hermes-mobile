@@ -16,7 +16,7 @@
 | 2026-07-26 | Created `packages/contracts/` with shared TypeScript types |
 | 2026-07-26 | Created `lib/api-client.ts` — mock-mode Hermes API client |
 | 2026-07-26 | 96/96 sidecar tests pass, TypeScript clean |
-| 2026-07-26 | 2 local commits, NOT pushed |
+| 2026-07-26 | 2 local commits pushed and merged via PR #14 |
 
 ## Repository layout
 
