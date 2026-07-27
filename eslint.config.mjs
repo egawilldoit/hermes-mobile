@@ -1,5 +1,5 @@
 // @ts-check
-import expo from 'eslint-config-expo/flat';
+import expo from 'eslint-config-expo/flat.js';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
