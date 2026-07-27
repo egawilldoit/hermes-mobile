@@ -153,7 +153,9 @@ jobs:
 
           tar -xzf "$ARCHIVE" gitleaks
           chmod +x gitleaks
-          sudo mv gitleaks /usr/local/bin/
+          mkdir -p "$RUNNER_TEMP/bin"
+          mv gitleaks "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           rm -f "$ARCHIVE"
           gitleaks version
 
@@ -163,7 +165,7 @@ jobs:
             --source . \
             --report-path gitleaks-report.json \
             --no-git \
-            --verbose 2>&1 || true
+            --verbose 2>&1
 
       - name: Positive test — fake secret must be detected
         run: |
@@ -206,12 +208,12 @@ jobs:
     steps:
       # actions/checkout@v4 (2025-02-03)
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Verify no .env variants are tracked (allow .env.example)
+      - name: Verify no .env variants are tracked (allow .env.example / .env.sample / .env.template)
         run: |
           set -euo pipefail
-          tracked_env=$(git ls-files '*.env' 2>/dev/null || true)
-          # .env.example is a documented example — allow it
-          violations=$(echo "$tracked_env" | grep -v '\.env\.example$' || true)
+          tracked_env=$(git ls-files | grep -E '\.env' 2>/dev/null || true)
+          # .env.example, .env.sample, .env.template are documented examples — allow them
+          violations=$(echo "$tracked_env" | grep -v -E '\.env\.(example|sample|template)$' || true)
           if [ -n "$violations" ]; then
             echo "ERROR: The following .env files are tracked in git (should not be):"
             echo "$violations"
@@ -240,8 +242,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install sidecar dependencies
+        run: npm ci --prefix services/hermes-sidecar
       - name: Validate safe defaults
-        run: node scripts/check-safe-defaults.mjs
+        run: npx tsx scripts/check-safe-defaults.mjs
 
   # ── 7. Check .gitignore coverage ───────────────────────────────────
   check-gitignore:

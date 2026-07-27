@@ -53,21 +53,30 @@ describe('cn utility', () => {
 // Validate that the app's route entry points are importable without
 // error.  This exercises the module graph through TypeScript resolution
 // and checks that every named export referenced by the router exists.
+// Import failures propagate as uncaught errors — no try/catch wrapping.
 
 describe('app navigation structure', () => {
   it('_layout.tsx can be imported (theme + portal + stack)', async () => {
-    // Dynamic import to avoid vitest failing on missing native modules.
-    // If the layout module has a structural problem the import will throw.
-    let mod;
-    try {
-      mod = await import('../_layout');
-    } catch {
-      // Expected when no React Native runtime is available — skip.
-      // In CI the import succeeds because the test runs in node.
-      return;
-    }
-    // The module must export at least RootLayout + ErrorBoundary
+    // Direct import — must throw on structural problems.  No try/catch.
+    const mod = await import('../_layout');
     expect(typeof mod.default).toBe('function');
     expect(mod.ErrorBoundary).toBeDefined();
+  });
+
+  it('index route is importable', async () => {
+    const mod = await import('../index');
+    expect(mod.default).toBeDefined();
+  });
+
+  it('+not-found route is importable', async () => {
+    const mod = await import('../+not-found');
+    expect(mod.default).toBeDefined();
+  });
+
+  it('broken import must fail (no silent error swallowing)', async () => {
+    // This intentionally imports a nonexistent module to verify that
+    // import errors are NOT silently swallowed by the test harness.
+    // @ts-expect-error — this module intentionally does not exist
+    await expect(import('./does-not-exist')).rejects.toThrow();
   });
 });
