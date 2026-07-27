@@ -86,14 +86,14 @@ Build Hermes Mobile as a **Governed Operator** Android control plane around the 
 
 ### GitHub-visible baseline
 
-GitHub `main` currently contains the original Expo template:
+GitHub `main` now contains the consolidated repository with sidecar integration (merged via PR #14):
 
 - Expo `~56.0.13`;
 - React Native `0.85.3`;
 - React `19.2.3`;
 - Expo Router `~56.2.12`;
 - NativeWind and React Native Reusables;
-- no visible sidecar or production connection on `main`.
+- sidecar service and shared contracts under `services/hermes-sidecar/` and `packages/contracts/`.
 
 ### Operator-reported local branch
 
@@ -1065,7 +1065,7 @@ No later gate may be bypassed because an earlier demo appears functional.
 
 ### Repository truth
 
-GitHub `main` still shows the initial template. Local consolidated implementation remains operator-reported until issue #3 pushes and verifies it. PR #1 contains this specification and Wayfinder record and must be reconciled with the implementation branch.
+GitHub `main` now contains the consolidated repository with sidecar integration (merged via PR #14). The specification and Wayfinder record have been reconciled with the implementation branch via PRs #14, #15, and #1.
 
 ### Hermes truth
 
